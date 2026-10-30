@@ -1,0 +1,30 @@
+# Code Owners for NEXUS CORE
+
+# Global owners - all changes require approval from these users
+* @TECHTUNE-I-T-SOLUTIONS/admin
+
+# Backend code
+backend/src/main/java/ @TECHTUNE-I-T-SOLUTIONS/backend-team
+backend/src/test/java/ @TECHTUNE-I-T-SOLUTIONS/backend-team
+
+# Database migrations
+backend/src/main/resources/db/migration/ @TECHTUNE-I-T-SOLUTIONS/backend-team @TECHTUNE-I-T-SOLUTIONS/dba-team
+
+# Infrastructure
+infrastructure/ @TECHTUNE-I-T-SOLUTIONS/devops-team
+
+# Documentation
+docs/ @TECHTUNE-I-T-SOLUTIONS/docs-team
+README.md @TECHTUNE-I-T-SOLUTIONS/docs-team
+CONTRIBUTING.md @TECHTUNE-I-T-SOLUTIONS/docs-team
+
+# GitHub configuration
+.github/ @TECHTUNE-I-T-SOLUTIONS/admin
+
+# Security
+SECURITY.md @TECHTUNE-I-T-SOLUTIONS/security-team
+backend/src/main/java/com/techtune/nexus/identity/ @TECHTUNE-I-T-SOLUTIONS/security-team
+backend/src/main/java/com/techtune/nexus/security/ @TECHTUNE-I-T-SOLUTIONS/security-team
+
+# CI/CD
+.github/workflows/ @TECHTUNE-I-T-SOLUTIONS/devops-team

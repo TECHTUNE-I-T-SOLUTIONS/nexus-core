@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Questions
+    url: https://github.com/TECHTUNE-I-T-SOLUTIONS/nexus-core/discussions
+    about: Please ask and answer questions in GitHub Discussions.
+  - name: Security Issues
+    url: https://github.com/TECHTUNE-I-T-SOLUTIONS/nexus-core/security/policy
+    about: Please report security vulnerabilities privately via our security policy.
