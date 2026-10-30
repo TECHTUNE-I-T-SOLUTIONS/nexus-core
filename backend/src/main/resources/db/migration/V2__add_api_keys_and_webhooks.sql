@@ -31,7 +31,7 @@ CREATE TABLE webhook_outbox (
     tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
     job_id UUID NOT NULL REFERENCES jobs(id) ON DELETE CASCADE,
     webhook_url VARCHAR(2048) NOT NULL,
-    payload JSONB NOT NULL,
+    payload TEXT NOT NULL,
     retry_count INTEGER NOT NULL DEFAULT 0,
     max_retries INTEGER NOT NULL DEFAULT 3,
     next_retry_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

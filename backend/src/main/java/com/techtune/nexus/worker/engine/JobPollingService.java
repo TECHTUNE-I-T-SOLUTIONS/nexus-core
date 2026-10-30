@@ -3,7 +3,6 @@ package com.techtune.nexus.worker.engine;
 import com.techtune.nexus.job.domain.Job;
 import com.techtune.nexus.job.domain.JobStatus;
 import com.techtune.nexus.job.persistence.JobRepository;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +24,13 @@ public class JobPollingService {
         Instant now = Instant.now();
         List<JobStatus> claimableStatuses = List.of(JobStatus.QUEUED, JobStatus.RETRY_WAIT);
         
-        return jobRepository.findClaimableJobs(tenantId, claimableStatuses, now, PageRequest.of(0, batchSize));
+        List<Job> jobs = jobRepository.findClaimableJobs(tenantId, claimableStatuses, now);
+        
+        // Apply batch size limit in memory
+        if (jobs.size() > batchSize) {
+            return jobs.subList(0, batchSize);
+        }
+        return jobs;
     }
 
     @Transactional
