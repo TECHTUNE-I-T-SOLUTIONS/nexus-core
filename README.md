@@ -149,7 +149,7 @@ For detailed architecture documentation, see [docs/SYSTEM_ARCHITECTURE.md](docs/
 ### Prerequisites
 
 - Java 21 LTS ([Install](https://adoptium.net/))
-- Maven 3.10+ ([Install](https://maven.apache.org/install.html))
+- Maven 3.10+ ([Install](https://maven.apache.org/install.html)) - or use included Maven Wrapper
 - Docker & Docker Compose ([Install](https://docs.docker.com/get-docker/))
 - Git ([Install](https://git-scm.com/downloads))
 
@@ -190,14 +190,36 @@ SERVER_PORT=8080
 
 ### 4. Build the Application
 
+**Using Maven Wrapper (recommended):**
 ```bash
+cd backend
 ./mvnw clean verify
+```
+
+**Using system Maven:**
+```bash
+cd backend
+mvn clean verify
+```
+
+**Windows PowerShell:**
+```powershell
+cd backend
+.\mvnw.cmd clean verify
 ```
 
 ### 5. Run the Application
 
+**Using Maven Wrapper:**
 ```bash
+cd backend
 ./mvnw spring-boot:run
+```
+
+**Windows PowerShell:**
+```powershell
+cd backend
+.\mvnw.cmd spring-boot:run
 ```
 
 The application will start on `http://localhost:8080`
@@ -258,20 +280,44 @@ For complete API documentation, see [docs/API_SPECIFICATION.md](docs/API_SPECIFI
 
 ### Run All Tests
 
+**Using Maven Wrapper:**
 ```bash
+cd backend
 ./mvnw test
+```
+
+**Windows PowerShell:**
+```powershell
+cd backend
+.\mvnw.cmd test
 ```
 
 ### Run Integration Tests
 
+**Using Maven Wrapper:**
 ```bash
+cd backend
 ./mvnw verify
+```
+
+**Windows PowerShell:**
+```powershell
+cd backend
+.\mvnw.cmd verify
 ```
 
 ### Run Specific Test Class
 
+**Using Maven Wrapper:**
 ```bash
+cd backend
 ./mvnw test -Dtest=JobServiceTest
+```
+
+**Windows PowerShell:**
+```powershell
+cd backend
+.\mvnw.cmd test -Dtest=JobServiceTest
 ```
 
 Tests use Testcontainers for real PostgreSQL instances, ensuring reliability.

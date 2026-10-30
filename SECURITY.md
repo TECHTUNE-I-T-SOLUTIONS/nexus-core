@@ -12,7 +12,12 @@
 
 **Do NOT** report security vulnerabilities through public GitHub issues.
 
-Instead, please send an email to: **security@techtune.com**
+**Preferred Method:** Use GitHub's private vulnerability reporting:
+- Visit: https://github.com/TECHTUNE-I-T-SOLUTIONS/nexus-core/security/advisories
+- Click "Report a vulnerability"
+- Provide the details requested
+
+**Alternative:** Send an email to: security@techtune.com (if verified)
 
 ### What to Include
 
