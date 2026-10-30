@@ -61,3 +61,12 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
     name: logs/nexus-core.log
+
+nexus:
+  worker:
+    enabled: ${WORKER_ENABLED:true}
+    polling-interval: 5s
+    batch-size: 10
+    concurrency: 5
+    lease-duration-seconds: 60
+    worker-id: ${WORKER_ID:}

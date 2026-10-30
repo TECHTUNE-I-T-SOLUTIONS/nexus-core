@@ -122,7 +122,8 @@ public class JobService {
     public Job retryJob(UUID jobId, Instant scheduledAt) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
-        job.retry(scheduledAt);
+        job.scheduleRetry(scheduledAt);
+        job.retry();
         return jobRepository.save(job);
     }
 
