@@ -41,6 +41,24 @@ public class WebhookOutbox extends UuidIdentity {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
+    @Column(name = "event_type", length = 100)
+    private String eventType;
+
+    @Column(name = "event_version", length = 20)
+    private String eventVersion = "1.0";
+
+    @Column(name = "lease_expires_at")
+    private Instant leaseExpiresAt;
+
+    @Column(name = "http_status")
+    private Integer httpStatus;
+
+    @Column(name = "response_headers", columnDefinition = "TEXT")
+    private String responseHeaders;
+
+    @Column(name = "response_body", columnDefinition = "TEXT")
+    private String responseBody;
+
     public WebhookOutbox() {
     }
 
@@ -86,6 +104,54 @@ public class WebhookOutbox extends UuidIdentity {
 
     public String getErrorMessage() {
         return errorMessage;
+    }
+
+    public String getEventType() {
+        return eventType;
+    }
+
+    public String getEventVersion() {
+        return eventVersion;
+    }
+
+    public Instant getLeaseExpiresAt() {
+        return leaseExpiresAt;
+    }
+
+    public Integer getHttpStatus() {
+        return httpStatus;
+    }
+
+    public String getResponseHeaders() {
+        return responseHeaders;
+    }
+
+    public String getResponseBody() {
+        return responseBody;
+    }
+
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
+    }
+
+    public void setEventVersion(String eventVersion) {
+        this.eventVersion = eventVersion;
+    }
+
+    public void setLeaseExpiresAt(Instant leaseExpiresAt) {
+        this.leaseExpiresAt = leaseExpiresAt;
+    }
+
+    public void setHttpStatus(Integer httpStatus) {
+        this.httpStatus = httpStatus;
+    }
+
+    public void setResponseHeaders(String responseHeaders) {
+        this.responseHeaders = responseHeaders;
+    }
+
+    public void setResponseBody(String responseBody) {
+        this.responseBody = responseBody;
     }
 
     public void incrementRetryCount() {
