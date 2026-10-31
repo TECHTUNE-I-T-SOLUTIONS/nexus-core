@@ -24,8 +24,10 @@ ADD COLUMN IF NOT EXISTS event_version VARCHAR(20) DEFAULT '1.0',
 ADD COLUMN IF NOT EXISTS lease_expires_at TIMESTAMP,
 ADD COLUMN IF NOT EXISTS http_status INTEGER,
 ADD COLUMN IF NOT EXISTS response_headers TEXT,
-ADD COLUMN IF NOT EXISTS response_body TEXT;
+ADD COLUMN IF NOT EXISTS response_body TEXT,
+ADD COLUMN IF NOT EXISTS delivery_status VARCHAR(50) DEFAULT 'PENDING';
 
 -- Add index for finding pending webhook deliveries
 CREATE INDEX IF NOT EXISTS idx_webhook_outbox_pending ON webhook_outbox(next_retry_at) WHERE delivered_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_webhook_outbox_tenant ON webhook_outbox(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_outbox_delivery_status ON webhook_outbox(delivery_status);
