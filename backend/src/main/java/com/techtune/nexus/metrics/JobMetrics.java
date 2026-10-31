@@ -5,108 +5,74 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import org.springframework.stereotype.Component;
 
-import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class JobMetrics {
 
     private final Counter jobsSubmitted;
-    private final Counter jobsClaimed;
     private final Counter jobsCompleted;
     private final Counter jobsFailed;
     private final Counter jobsRetried;
-    private final Counter jobsExpired;
-    private final Counter jobsRecovered;
-    private final Counter webhooksDelivered;
-    private final Counter webhooksFailed;
-    private final Timer jobExecutionTimer;
+    private final Counter jobsCancelled;
+    private final Counter leaseRecoveries;
+    private final Timer executionDuration;
 
     public JobMetrics(MeterRegistry registry) {
         this.jobsSubmitted = Counter.builder("nexus.jobs.submitted")
-                .description("Total number of jobs submitted")
-                .register(registry);
-        
-        this.jobsClaimed = Counter.builder("nexus.jobs.claimed")
-                .description("Total number of jobs claimed by workers")
+                .description("Total jobs submitted")
                 .register(registry);
         
         this.jobsCompleted = Counter.builder("nexus.jobs.completed")
-                .description("Total number of jobs completed successfully")
+                .description("Total jobs completed successfully")
                 .register(registry);
         
         this.jobsFailed = Counter.builder("nexus.jobs.failed")
-                .description("Total number of jobs failed")
+                .description("Total jobs permanently failed")
                 .register(registry);
         
         this.jobsRetried = Counter.builder("nexus.jobs.retried")
-                .description("Total number of jobs retried")
+                .description("Total job retries")
                 .register(registry);
         
-        this.jobsExpired = Counter.builder("nexus.jobs.expired")
-                .description("Total number of job leases expired")
+        this.jobsCancelled = Counter.builder("nexus.jobs.cancelled")
+                .description("Total jobs cancelled")
                 .register(registry);
         
-        this.jobsRecovered = Counter.builder("nexus.jobs.recovered")
-                .description("Total number of jobs recovered after lease expiry")
+        this.leaseRecoveries = Counter.builder("nexus.jobs.lease_recoveries")
+                .description("Total lease recovery events")
                 .register(registry);
         
-        this.webhooksDelivered = Counter.builder("nexus.webhooks.delivered")
-                .description("Total number of webhooks delivered successfully")
-                .register(registry);
-        
-        this.webhooksFailed = Counter.builder("nexus.webhooks.failed")
-                .description("Total number of webhook delivery failures")
-                .register(registry);
-        
-        this.jobExecutionTimer = Timer.builder("nexus.jobs.execution.duration")
+        this.executionDuration = Timer.builder("nexus.jobs.execution_duration")
                 .description("Job execution duration")
-                .publishPercentiles(0.5, 0.95, 0.99)
-                .minimumExpectedValue(Duration.ofMillis(1))
-                .maximumExpectedValue(Duration.ofMinutes(5))
                 .register(registry);
     }
 
-    public void incrementJobsSubmitted() {
+    public void recordSubmitted() {
         jobsSubmitted.increment();
     }
 
-    public void incrementJobsClaimed() {
-        jobsClaimed.increment();
-    }
-
-    public void incrementJobsCompleted() {
+    public void recordCompleted() {
         jobsCompleted.increment();
     }
 
-    public void incrementJobsFailed() {
+    public void recordFailed() {
         jobsFailed.increment();
     }
 
-    public void incrementJobsRetried() {
+    public void recordRetried() {
         jobsRetried.increment();
     }
 
-    public void incrementJobsExpired() {
-        jobsExpired.increment();
+    public void recordCancelled() {
+        jobsCancelled.increment();
     }
 
-    public void incrementJobsRecovered() {
-        jobsRecovered.increment();
+    public void recordLeaseRecovery() {
+        leaseRecoveries.increment();
     }
 
-    public void incrementWebhooksDelivered() {
-        webhooksDelivered.increment();
-    }
-
-    public void incrementWebhooksFailed() {
-        webhooksFailed.increment();
-    }
-
-    public Timer.Sample startJobExecution() {
-        return Timer.start();
-    }
-
-    public void recordJobExecution(Timer.Sample sample) {
-        sample.stop(jobExecutionTimer);
+    public void recordExecutionDuration(long millis) {
+        executionDuration.record(millis, TimeUnit.MILLISECONDS);
     }
 }

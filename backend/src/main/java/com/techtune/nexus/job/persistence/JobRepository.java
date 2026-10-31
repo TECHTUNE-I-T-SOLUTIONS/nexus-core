@@ -22,6 +22,9 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     @Query("SELECT j FROM Job j WHERE j.tenant.id = :tenantId AND j.status = :status")
     List<Job> findByTenantIdAndStatus(@Param("tenantId") UUID tenantId, @Param("status") JobStatus status);
 
+    @Query("SELECT COUNT(j) FROM Job j WHERE j.tenant.id = :tenantId AND j.status = :status")
+    long countByTenantIdAndStatus(@Param("tenantId") UUID tenantId, @Param("status") JobStatus status);
+
     List<Job> findByStatus(JobStatus status);
 
     @Query("SELECT j FROM Job j WHERE j.tenant.id = :tenantId AND j.idempotencyKey = :idempotencyKey")

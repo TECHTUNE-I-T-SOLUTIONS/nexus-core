@@ -2,7 +2,6 @@ package com.techtune.nexus.worker.engine;
 
 import com.techtune.nexus.job.domain.Job;
 import com.techtune.nexus.job.persistence.JobRepository;
-import com.techtune.nexus.metrics.JobMetrics;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,11 +13,9 @@ import java.util.UUID;
 public class JobClaimingService {
 
     private final JobRepository jobRepository;
-    private final JobMetrics metrics;
 
-    public JobClaimingService(JobRepository jobRepository, JobMetrics metrics) {
+    public JobClaimingService(JobRepository jobRepository) {
         this.jobRepository = jobRepository;
-        this.metrics = metrics;
     }
 
     /**
@@ -47,7 +44,7 @@ public class JobClaimingService {
         }
 
         // Record metrics
-        claimedJobs.forEach(job -> metrics.incrementJobsClaimed());
+        // claimedJobs.forEach(job -> metrics.incrementJobsClaimed());
 
         return claimedJobs;
     }
@@ -68,7 +65,7 @@ public class JobClaimingService {
         List<Job> claimed = jobRepository.claimJob(jobId, workerId, leaseExpiresAt, now);
         
         if (!claimed.isEmpty()) {
-            metrics.incrementJobsClaimed();
+            // metrics.incrementJobsClaimed();
             return claimed.get(0);
         }
         
@@ -97,12 +94,12 @@ public class JobClaimingService {
         if (job.getAttemptCount() < job.getMaxAttempts()) {
             job.scheduleRetry(Instant.now().plusSeconds(60));
             job.retry();
-            metrics.incrementJobsRetried();
+            // metrics.incrementJobsRetried();
         } else {
-            metrics.incrementJobsExpired();
+            // metrics.incrementJobsExpired();
         }
         
         jobRepository.save(job);
-        metrics.incrementJobsRecovered();
+        // metrics.incrementJobsRecovered();
     }
 }
