@@ -8,7 +8,7 @@ Inspected Spring Boot controllers and DTOs in Phase 7.
 - `POST /api/v1/jobs/{id}/cancel` — requires `SCOPE_jobs:cancel`.
 - `POST /api/v1/jobs/{id}/retry` — requires `SCOPE_jobs:retry`.
 
-The typed client keeps the API key server-side and is ready for a server action or authenticated route handler.
+The typed client keeps the API key server-side and is used by the restricted `/api/jobs` route handler. This route is an integration boundary for previewing backend connectivity; it is not a human authentication system and must not be exposed as a shared identity in production.
 
 ## Discovered but not yet wired
 - Schedules: CRUD and pause/resume at `/api/v1/schedules`.
