@@ -2,6 +2,7 @@ package com.techtune.nexus.webhook.persistence;
 
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -16,8 +17,15 @@ public interface WebhookOutboxRepository extends JpaRepository<WebhookOutbox, UU
     @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveredAt IS NULL AND w.nextRetryAt <= :now ORDER BY w.nextRetryAt ASC")
     List<WebhookOutbox> findPendingWebhooks(@Param("now") Instant now);
 
-    @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveredAt IS NULL AND w.nextRetryAt <= :now AND (w.leaseExpiresAt IS NULL OR w.leaseExpiresAt < :now) ORDER BY w.nextRetryAt ASC LIMIT :batchSize")
-    List<WebhookOutbox> findClaimableWebhooks(@Param("now") Instant now, @Param("batchSize") int batchSize);
+    @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveredAt IS NULL AND w.nextRetryAt <= :now AND (w.leaseExpiresAt IS NULL OR w.leaseExpiresAt < :now) ORDER BY w.nextRetryAt ASC")
+    List<WebhookOutbox> findClaimableWebhooks(@Param("now") Instant now);
+
+    @Modifying
+    @Query("UPDATE WebhookOutbox w SET w.leaseExpiresAt = :leaseExpiresAt WHERE w.id = :id AND (w.leaseExpiresAt IS NULL OR w.leaseExpiresAt < :now)")
+    int claimWebhook(@Param("id") UUID id, @Param("leaseExpiresAt") Instant leaseExpiresAt, @Param("now") Instant now);
+
+    @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveredAt IS NULL AND w.leaseExpiresAt < :now AND w.retryCount < w.maxRetries")
+    List<WebhookOutbox> findAbandonedWebhooks(@Param("now") Instant now);
 
     List<WebhookOutbox> findByJobId(UUID jobId);
 }
