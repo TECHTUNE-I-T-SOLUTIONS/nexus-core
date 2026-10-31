@@ -73,8 +73,8 @@ public class WebhookEventPublisher {
     }
 
     private void createOutboxEntry(Job job, WebhookEvent event) throws Exception {
-        String payload = event.toString();
-        
+        String payload = event.toJson();
+
         // Create outbox entry - the delivery worker will match to endpoints
         WebhookOutbox outbox = new WebhookOutbox(
                 job.getTenant(),
@@ -85,9 +85,9 @@ public class WebhookEventPublisher {
         outbox.setEventType(event.eventType());
         outbox.setEventVersion(event.eventVersion());
         outbox.scheduleRetry(Instant.now());
-        
+
         webhookOutboxRepository.save(outbox);
-        logger.info("Created webhook outbox entry {} for job {} with event type {}", 
+        logger.info("Created webhook outbox entry {} for job {} with event type {}",
                 outbox.getId(), job.getId(), event.eventType());
     }
 
