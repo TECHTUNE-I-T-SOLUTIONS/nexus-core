@@ -2,8 +2,11 @@ package com.techtune.nexus.webhook.application;
 
 import com.techtune.nexus.tenant.application.TenantService;
 import com.techtune.nexus.tenant.domain.Tenant;
+import com.techtune.nexus.webhook.SSRFProtection;
 import com.techtune.nexus.webhook.domain.WebhookEndpoint;
+import com.techtune.nexus.webhook.encryption.SecretEncryptionService;
 import com.techtune.nexus.webhook.persistence.WebhookEndpointRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -19,10 +22,18 @@ public class WebhookEndpointService {
 
     private final WebhookEndpointRepository webhookEndpointRepository;
     private final TenantService tenantService;
+    private final SecretEncryptionService encryptionService;
+    private final boolean encryptionEnabled;
 
-    public WebhookEndpointService(WebhookEndpointRepository webhookEndpointRepository, TenantService tenantService) {
+    public WebhookEndpointService(
+            WebhookEndpointRepository webhookEndpointRepository,
+            TenantService tenantService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) SecretEncryptionService encryptionService,
+            @Value("${nexus.webhook.encryption.enabled:false}") boolean encryptionEnabled) {
         this.webhookEndpointRepository = webhookEndpointRepository;
         this.tenantService = tenantService;
+        this.encryptionService = encryptionService;
+        this.encryptionEnabled = encryptionEnabled;
     }
 
     private UUID getAuthenticatedTenantId() {
@@ -46,10 +57,14 @@ public class WebhookEndpointService {
         validateWebhookUrl(url);
         validateSecret(secret);
 
+        String secretToStore = encryptionEnabled && encryptionService != null ? encryptionService.encrypt(secret) : secret;
+        boolean isEncrypted = encryptionEnabled && encryptionService != null;
+
         Tenant tenant = tenantService.findTenantById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
 
-        WebhookEndpoint endpoint = new WebhookEndpoint(tenant, url, secret, eventTypes);
+        WebhookEndpoint endpoint = new WebhookEndpoint(tenant, url, secretToStore, eventTypes);
+        endpoint.setSecretEncrypted(isEncrypted);
         return webhookEndpointRepository.save(endpoint);
     }
 
@@ -118,7 +133,10 @@ public class WebhookEndpointService {
         }
         if (secret != null) {
             validateSecret(secret);
-            endpoint.setSecret(secret);
+            String secretToStore = encryptionEnabled && encryptionService != null ? encryptionService.encrypt(secret) : secret;
+            boolean isEncrypted = encryptionEnabled && encryptionService != null;
+            endpoint.setSecret(secretToStore);
+            endpoint.setSecretEncrypted(isEncrypted);
         }
         if (eventTypes != null) {
             endpoint.setEventTypes(eventTypes);
@@ -148,10 +166,16 @@ public class WebhookEndpointService {
             throw new IllegalArgumentException("Webhook URL cannot be blank");
         }
 
+        // Check for user-info component (credentials in URL)
+        if (SSRFProtection.hasUserInfo(url)) {
+            throw new IllegalArgumentException("Webhook URL cannot contain user credentials");
+        }
+
         try {
             URI uri = new URI(url);
             String scheme = uri.getScheme();
-            if (!"http".equals(scheme) && !"https".equals(scheme)) {
+            
+            if (!SSRFProtection.isAllowedScheme(scheme)) {
                 throw new IllegalArgumentException("Webhook URL must use HTTP or HTTPS scheme");
             }
 
@@ -160,48 +184,20 @@ public class WebhookEndpointService {
                 throw new IllegalArgumentException("Webhook URL must have a valid host");
             }
 
-            // Prevent SSRF by rejecting localhost and private IP ranges
-            if (isLoopbackOrPrivate(host)) {
-                throw new IllegalArgumentException("Webhook URL cannot point to localhost or private IP addresses");
+            // Comprehensive SSRF protection including DNS resolution
+            if (!SSRFProtection.isSafeHost(host)) {
+                throw new IllegalArgumentException("Webhook URL cannot point to localhost, private IPs, or blocked addresses");
             }
 
             // Reject non-standard ports for safety
             int port = uri.getPort();
-            if (port != -1 && (port < 80 || port > 65535)) {
+            if (!SSRFProtection.isValidPort(port)) {
                 throw new IllegalArgumentException("Webhook URL must use a valid port (80-65535)");
             }
 
         } catch (URISyntaxException e) {
             throw new IllegalArgumentException("Invalid webhook URL: " + e.getMessage());
         }
-    }
-
-    private boolean isLoopbackOrPrivate(String host) {
-        // Check for localhost variants
-        if (host.equalsIgnoreCase("localhost") || host.equals("127.0.0.1") || host.equals("::1")) {
-            return true;
-        }
-
-        // Check for private IP ranges (simplified check)
-        // In production, this should use InetAddress.getByName() for proper IP validation
-        return host.startsWith("10.") || 
-               host.startsWith("192.168.") || 
-               host.startsWith("172.16.") || 
-               host.startsWith("172.17.") || 
-               host.startsWith("172.18.") || 
-               host.startsWith("172.19.") || 
-               host.startsWith("172.20.") || 
-               host.startsWith("172.21.") || 
-               host.startsWith("172.22.") || 
-               host.startsWith("172.23.") || 
-               host.startsWith("172.24.") || 
-               host.startsWith("172.25.") || 
-               host.startsWith("172.26.") || 
-               host.startsWith("172.27.") || 
-               host.startsWith("172.28.") || 
-               host.startsWith("172.29.") || 
-               host.startsWith("172.30.") || 
-               host.startsWith("172.31.");
     }
 
     private void validateSecret(String secret) {
@@ -211,5 +207,18 @@ public class WebhookEndpointService {
         if (secret.length() < 16) {
             throw new IllegalArgumentException("Webhook secret must be at least 16 characters");
         }
+    }
+
+    /**
+     * Decrypts the stored secret for use in webhook delivery.
+     * 
+     * @param encryptedSecret The encrypted secret from the database
+     * @return The plaintext secret
+     */
+    public String decryptSecret(String encryptedSecret) {
+        if (!encryptionEnabled || encryptionService == null) {
+            return encryptedSecret;
+        }
+        return encryptionService.decrypt(encryptedSecret);
     }
 }
