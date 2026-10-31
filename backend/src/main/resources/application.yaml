@@ -85,3 +85,6 @@ nexus:
     encryption:
       enabled: ${WEBHOOK_ENCRYPTION_ENABLED:false}
       key: ${WEBHOOK_ENCRYPTION_KEY:}
+    rate-limit:
+      max-requests: 100
+      window-seconds: 60
