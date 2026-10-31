@@ -1,6 +1,9 @@
 package com.techtune.nexus.webhook.event;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -9,7 +12,6 @@ public record WebhookEvent(
         String id,
         String eventType,
         String eventVersion,
-        @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
         Instant occurredAt,
         UUID tenantId,
         UUID jobId,
@@ -17,6 +19,8 @@ public record WebhookEvent(
         String jobStatus,
         String payload
 ) {
+    private static final ObjectMapper OBJECT_MAPPER = createObjectMapper();
+
     public static final String EVENT_VERSION = "1.0";
     public static final String EVENT_JOB_COMPLETED = "job.completed";
     public static final String EVENT_JOB_FAILED = "job.failed";
@@ -64,28 +68,26 @@ public record WebhookEvent(
         );
     }
 
-    public static WebhookEvent fromString(String json) {
-        // Simple parsing - the JSON is always the same structure from our toString()
-        // For now, return a basic event; full JSON parsing would require Jackson
-        // This is a temporary workaround to avoid ObjectMapper dependency
-        return new WebhookEvent(
-                "unknown",
-                "unknown",
-                EVENT_VERSION,
-                Instant.now(),
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                "unknown",
-                "unknown",
-                json
-        );
+    public String toJson() {
+        try {
+            return OBJECT_MAPPER.writeValueAsString(this);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to serialize WebhookEvent to JSON", e);
+        }
     }
 
-    @Override
-    public String toString() {
-        return String.format(
-                "{\"id\":\"%s\",\"eventType\":\"%s\",\"eventVersion\":\"%s\",\"occurredAt\":\"%s\",\"tenantId\":\"%s\",\"jobId\":\"%s\",\"jobType\":\"%s\",\"jobStatus\":\"%s\",\"payload\":%s}",
-                id, eventType, eventVersion, occurredAt, tenantId, jobId, jobType, jobStatus, payload
-        );
+    public static WebhookEvent fromJson(String json) {
+        try {
+            return OBJECT_MAPPER.readValue(json, WebhookEvent.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Failed to deserialize WebhookEvent from JSON", e);
+        }
+    }
+
+    private static ObjectMapper createObjectMapper() {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        return mapper;
     }
 }

@@ -4,8 +4,8 @@ import com.techtune.nexus.webhook.SSRFProtection;
 import com.techtune.nexus.webhook.application.WebhookEndpointService;
 import com.techtune.nexus.webhook.domain.WebhookEndpoint;
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
-import com.techtune.nexus.webhook.event.WebhookEvent;
 import com.techtune.nexus.webhook.metrics.WebhookDeliveryMetrics;
+import com.techtune.nexus.webhook.signing.WebhookSignatureService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,11 +17,8 @@ import org.springframework.web.client.RestTemplate;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Base64;
 
 @Service
 public class WebhookDeliveryService {
@@ -33,20 +30,24 @@ public class WebhookDeliveryService {
     private final RestTemplate restTemplate;
     private final WebhookEndpointService webhookEndpointService;
     private final WebhookDeliveryMetrics metrics;
+    private final WebhookSignatureService signatureService;
 
     @Autowired
-    public WebhookDeliveryService(WebhookEndpointService webhookEndpointService, 
-                                  @org.springframework.beans.factory.annotation.Autowired(required = false) WebhookDeliveryMetrics metrics) {
+    public WebhookDeliveryService(WebhookEndpointService webhookEndpointService,
+                                  @org.springframework.beans.factory.annotation.Autowired(required = false) WebhookDeliveryMetrics metrics,
+                                  @org.springframework.beans.factory.annotation.Autowired(required = false) WebhookSignatureService signatureService) {
         this.webhookEndpointService = webhookEndpointService;
         this.metrics = metrics != null ? metrics : new NoOpMetrics();
+        this.signatureService = signatureService != null ? signatureService : new WebhookSignatureService();
         this.restTemplate = createRestTemplate();
     }
 
     // Constructor for testing with mocked RestTemplate
-    public WebhookDeliveryService(RestTemplate restTemplate, WebhookEndpointService webhookEndpointService, WebhookDeliveryMetrics metrics) {
+    public WebhookDeliveryService(RestTemplate restTemplate, WebhookEndpointService webhookEndpointService, WebhookDeliveryMetrics metrics, WebhookSignatureService signatureService) {
         this.restTemplate = restTemplate;
         this.webhookEndpointService = webhookEndpointService;
         this.metrics = metrics != null ? metrics : new NoOpMetrics();
+        this.signatureService = signatureService != null ? signatureService : new WebhookSignatureService();
     }
 
     // No-op metrics implementation for when metrics is not available
@@ -73,7 +74,11 @@ public class WebhookDeliveryService {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(CONNECTION_TIMEOUT_SECONDS * 1000);
         factory.setReadTimeout(RESPONSE_TIMEOUT_SECONDS * 1000);
-        return new RestTemplate(factory);
+        RestTemplate restTemplate = new RestTemplate(factory);
+        // Disable automatic redirect following to prevent SSRF attacks via redirects
+        // Note: SimpleClientHttpRequestFactory doesn't have a built-in redirect disable option
+        // We handle 3xx responses as errors in the delivery method
+        return restTemplate;
     }
 
     public DeliveryResult deliver(WebhookEndpoint endpoint, WebhookOutbox outbox) {
@@ -85,17 +90,17 @@ public class WebhookDeliveryService {
             String secret = webhookEndpointService.decryptSecret(endpoint.getSecret());
 
             String body = outbox.getPayload();
-            WebhookEvent event = WebhookEvent.fromString(body);
-            String signature = generateSignature(secret, body);
+            String signature = signatureService.generateSignature(secret, body);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("X-Webhook-Id", outbox.getId().toString());
+            String outboxId = outbox.getId() != null ? outbox.getId().toString() : "unknown";
+            headers.set("X-Webhook-Id", outboxId);
             headers.set("X-Webhook-Signature", signature);
             headers.set("X-Webhook-Timestamp", Instant.now().toString());
-            headers.set("X-Webhook-Event", event.eventType());
-            headers.set("X-Webhook-Event-Version", event.eventVersion());
-            headers.set("X-Webhook-Delivery", outbox.getId().toString());
+            headers.set("X-Webhook-Event", outbox.getEventType());
+            headers.set("X-Webhook-Event-Version", outbox.getEventVersion());
+            headers.set("X-Webhook-Delivery", outboxId);
 
             HttpEntity<String> request = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.exchange(
@@ -104,6 +109,16 @@ public class WebhookDeliveryService {
                     request,
                     String.class
             );
+
+            // Check for redirect responses (3xx) and treat as errors
+            if (response.getStatusCode().is3xxRedirection()) {
+                String location = response.getHeaders() != null ? response.getHeaders().getFirst("Location") : "unknown";
+                logger.error("Webhook delivery returned redirect status {} to location {}. Redirects are not allowed for SSRF protection.",
+                        response.getStatusCode(), location);
+                metrics.recordDeliveryFailure();
+                return new DeliveryResult(false, response.getStatusCode().value(),
+                        "Redirect not allowed: " + response.getStatusCode() + " to " + location, response.getBody());
+            }
 
             // Record success metric and latency
             metrics.recordDeliverySuccess();
@@ -129,31 +144,20 @@ public class WebhookDeliveryService {
         try {
             URI uri = new URI(url);
             String host = uri.getHost();
-            
+
             // Re-validate at connection time to prevent DNS rebinding
             if (!SSRFProtection.isSafeHost(host)) {
                 throw new SecurityException("Webhook target resolved to blocked address: " + host);
             }
-            
+
             // Additional validation: resolve and check the actual IP
             InetAddress address = InetAddress.getByName(host);
             if (!SSRFProtection.isSafeAddress(address)) {
                 throw new SecurityException("Webhook target IP is blocked: " + address.getHostAddress());
             }
-            
+
         } catch (Exception e) {
             throw new SecurityException("Failed to validate webhook delivery target: " + e.getMessage(), e);
-        }
-    }
-
-    public String generateSignature(String secret, String payload) {
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            String message = secret + payload;
-            byte[] hash = digest.digest(message.getBytes(StandardCharsets.UTF_8));
-            return Base64.getEncoder().encodeToString(hash);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to generate signature", e);
         }
     }
 
