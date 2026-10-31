@@ -30,6 +30,12 @@ public class WebhookDeliveryService {
         this.restTemplate = new RestTemplate();
     }
 
+    // Constructor for testing with mocked RestTemplate
+    public WebhookDeliveryService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
+    }
+
     public DeliveryResult deliver(WebhookEndpoint endpoint, WebhookOutbox outbox) {
         try {
             WebhookEvent event = objectMapper.readValue(outbox.getPayload(), WebhookEvent.class);
@@ -64,7 +70,7 @@ public class WebhookDeliveryService {
         }
     }
 
-    private String generateSignature(String secret, String payload) {
+    public String generateSignature(String secret, String payload) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             String message = secret + payload;

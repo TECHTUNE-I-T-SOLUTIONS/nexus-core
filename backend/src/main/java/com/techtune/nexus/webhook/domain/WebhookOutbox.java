@@ -154,6 +154,18 @@ public class WebhookOutbox extends UuidIdentity {
         this.responseBody = responseBody;
     }
 
+    public void setTenant(Tenant tenant) {
+        this.tenant = tenant;
+    }
+
+    public void setWebhookUrl(String webhookUrl) {
+        this.webhookUrl = webhookUrl;
+    }
+
+    public void setPayload(String payload) {
+        this.payload = payload;
+    }
+
     public void incrementRetryCount() {
         this.retryCount++;
     }
