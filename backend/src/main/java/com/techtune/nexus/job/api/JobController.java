@@ -36,7 +36,8 @@ public class JobController {
                 request.getScheduledAt(),
                 request.getMaxAttempts(),
                 request.getTimeoutSeconds(),
-                request.getIdempotencyKey()
+                request.getIdempotencyKey(),
+                null // Manual jobs don't have a schedule
         );
         return ResponseEntity.status(HttpStatus.CREATED).body(JobResponse.from(job));
     }

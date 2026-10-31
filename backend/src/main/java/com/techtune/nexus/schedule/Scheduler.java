@@ -74,7 +74,8 @@ public class Scheduler {
                     schedule.getNextExecutionAt(),
                     schedule.getJobMaxAttempts(),
                     schedule.getJobTimeoutSeconds(),
-                    null // No idempotency key for scheduled jobs
+                    null, // No idempotency key for scheduled jobs
+                    schedule.getId() // Track which schedule generated this job
             );
 
             logger.info("Created job {} for schedule {}", job.getId(), schedule.getId());
@@ -92,6 +93,12 @@ public class Scheduler {
             logger.info("Advanced schedule {} to next execution at {}", schedule.getId(), nextExecution);
 
         } catch (Exception e) {
+            // Handle unique constraint violation (duplicate job from another scheduler)
+            // Log and continue - the other scheduler will advance the schedule
+            if (e.getMessage() != null && e.getMessage().contains("uq_jobs_schedule_time")) {
+                logger.warn("Duplicate job creation prevented for schedule {}", schedule.getId());
+                return;
+            }
             logger.error("Error processing schedule {}", schedule.getId(), e);
         }
     }

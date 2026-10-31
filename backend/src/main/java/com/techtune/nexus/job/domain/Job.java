@@ -52,6 +52,9 @@ public class Job extends UuidIdentity {
     @Column(name = "idempotency_key", length = 255)
     private String idempotencyKey;
 
+    @Column(name = "schedule_id")
+    private UUID scheduleId;
+
     @Column(name = "worker_id", length = 255)
     private String workerId;
 
@@ -172,6 +175,14 @@ public class Job extends UuidIdentity {
 
     public void setIdempotencyKey(String idempotencyKey) {
         this.idempotencyKey = idempotencyKey;
+    }
+
+    public UUID getScheduleId() {
+        return scheduleId;
+    }
+
+    public void setScheduleId(UUID scheduleId) {
+        this.scheduleId = scheduleId;
     }
 
     public String getWorkerId() {

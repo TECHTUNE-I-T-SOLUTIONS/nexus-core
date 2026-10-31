@@ -39,7 +39,7 @@ public class JobService {
         return null;
     }
 
-    public Job createJob(UUID tenantId, String jobType, JsonNode payload, Integer priority, Instant scheduledAt, Integer maxAttempts, Integer timeoutSeconds, String idempotencyKey) {
+    public Job createJob(UUID tenantId, String jobType, JsonNode payload, Integer priority, Instant scheduledAt, Integer maxAttempts, Integer timeoutSeconds, String idempotencyKey, UUID scheduleId) {
         UUID authenticatedTenantId = getAuthenticatedTenantId();
         if (authenticatedTenantId != null && !authenticatedTenantId.equals(tenantId)) {
             throw new IllegalArgumentException("Cannot create jobs for other tenants");
@@ -62,6 +62,9 @@ public class JobService {
         }
         if (idempotencyKey != null) {
             job.setIdempotencyKey(idempotencyKey);
+        }
+        if (scheduleId != null) {
+            job.setScheduleId(scheduleId);
         }
         job.queue(); // Queue the job for execution
         return jobRepository.save(job);
