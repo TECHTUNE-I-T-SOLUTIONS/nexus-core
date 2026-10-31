@@ -63,6 +63,7 @@ public class JobService {
         if (idempotencyKey != null) {
             job.setIdempotencyKey(idempotencyKey);
         }
+        job.queue(); // Queue the job for execution
         return jobRepository.save(job);
     }
 
@@ -158,13 +159,14 @@ public class JobService {
     public Job retryJob(UUID jobId, Instant scheduledAt) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
-        
+
         UUID authenticatedTenantId = getAuthenticatedTenantId();
         if (authenticatedTenantId != null && !authenticatedTenantId.equals(job.getTenantId())) {
             throw new IllegalArgumentException("Cannot retry jobs from other tenants");
         }
-        
-        job.retry(scheduledAt);
+
+        job.scheduleRetry(scheduledAt);
+        job.retry();
         return jobRepository.save(job);
     }
 

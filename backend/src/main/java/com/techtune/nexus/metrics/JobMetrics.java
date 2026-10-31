@@ -16,6 +16,7 @@ public class JobMetrics {
     private final Counter jobsFailed;
     private final Counter jobsRetried;
     private final Counter jobsExpired;
+    private final Counter jobsRecovered;
     private final Counter webhooksDelivered;
     private final Counter webhooksFailed;
     private final Timer jobExecutionTimer;
@@ -43,6 +44,10 @@ public class JobMetrics {
         
         this.jobsExpired = Counter.builder("nexus.jobs.expired")
                 .description("Total number of job leases expired")
+                .register(registry);
+        
+        this.jobsRecovered = Counter.builder("nexus.jobs.recovered")
+                .description("Total number of jobs recovered after lease expiry")
                 .register(registry);
         
         this.webhooksDelivered = Counter.builder("nexus.webhooks.delivered")
@@ -83,6 +88,10 @@ public class JobMetrics {
 
     public void incrementJobsExpired() {
         jobsExpired.increment();
+    }
+
+    public void incrementJobsRecovered() {
+        jobsRecovered.increment();
     }
 
     public void incrementWebhooksDelivered() {
