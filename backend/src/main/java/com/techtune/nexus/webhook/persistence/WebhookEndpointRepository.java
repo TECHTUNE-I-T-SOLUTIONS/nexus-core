@@ -18,7 +18,4 @@ public interface WebhookEndpointRepository extends JpaRepository<WebhookEndpoint
 
     @Query("SELECT we FROM WebhookEndpoint we WHERE we.tenant.id = :tenantId AND we.enabled = true")
     List<WebhookEndpoint> findEnabledByTenantId(@Param("tenantId") UUID tenantId);
-
-    @Query("SELECT we FROM WebhookEndpoint we WHERE we.tenant.id = :tenantId AND we.enabled = true AND (:eventType IS NULL OR :eventType MEMBER OF we.eventTypes)")
-    List<WebhookEndpoint> findEnabledByTenantIdAndEventType(@Param("tenantId") UUID tenantId, @Param("eventType") String eventType);
 }

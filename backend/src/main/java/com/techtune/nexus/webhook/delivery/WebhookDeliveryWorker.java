@@ -1,8 +1,8 @@
 package com.techtune.nexus.webhook.delivery;
 
+import com.techtune.nexus.webhook.application.WebhookEndpointService;
 import com.techtune.nexus.webhook.domain.WebhookEndpoint;
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
-import com.techtune.nexus.webhook.persistence.WebhookEndpointRepository;
 import com.techtune.nexus.webhook.persistence.WebhookOutboxRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,15 +23,15 @@ public class WebhookDeliveryWorker {
     private static final int LEASE_DURATION_SECONDS = 300;
 
     private final WebhookOutboxRepository webhookOutboxRepository;
-    private final WebhookEndpointRepository webhookEndpointRepository;
+    private final WebhookEndpointService webhookEndpointService;
     private final WebhookDeliveryService deliveryService;
 
     public WebhookDeliveryWorker(
             WebhookOutboxRepository webhookOutboxRepository,
-            WebhookEndpointRepository webhookEndpointRepository,
+            WebhookEndpointService webhookEndpointService,
             WebhookDeliveryService deliveryService) {
         this.webhookOutboxRepository = webhookOutboxRepository;
-        this.webhookEndpointRepository = webhookEndpointRepository;
+        this.webhookEndpointService = webhookEndpointService;
         this.deliveryService = deliveryService;
     }
 
@@ -48,7 +48,7 @@ public class WebhookDeliveryWorker {
                 webhookOutboxRepository.save(outbox);
 
                 // Find the webhook endpoint
-                List<WebhookEndpoint> endpoints = webhookEndpointRepository.findEnabledByTenantIdAndEventType(
+                List<WebhookEndpoint> endpoints = webhookEndpointService.findEnabledEndpointsForEvent(
                         outbox.getTenant().getId(),
                         outbox.getEventType()
                 );
