@@ -27,5 +27,8 @@ public interface WebhookOutboxRepository extends JpaRepository<WebhookOutbox, UU
     @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveredAt IS NULL AND w.leaseExpiresAt < :now AND w.retryCount < w.maxRetries")
     List<WebhookOutbox> findAbandonedWebhooks(@Param("now") Instant now);
 
+    @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveryStatus = 'DEAD_LETTER' AND w.tenant.id = :tenantId")
+    List<WebhookOutbox> findDeadLetteredByTenant(@Param("tenantId") UUID tenantId);
+
     List<WebhookOutbox> findByJobId(UUID jobId);
 }

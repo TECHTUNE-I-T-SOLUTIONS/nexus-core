@@ -59,6 +59,9 @@ public class WebhookOutbox extends UuidIdentity {
     @Column(name = "response_body", columnDefinition = "TEXT")
     private String responseBody;
 
+    @Column(name = "delivery_status", length = 50)
+    private String deliveryStatus = "PENDING";
+
     public WebhookOutbox() {
     }
 
@@ -188,5 +191,21 @@ public class WebhookOutbox extends UuidIdentity {
 
     public boolean isDelivered() {
         return deliveredAt != null;
+    }
+
+    public void markDeadLettered() {
+        this.deliveryStatus = "DEAD_LETTER";
+        this.deliveredAt = Instant.now();
+    }
+
+    public void markForRetry() {
+        this.deliveryStatus = "PENDING";
+        this.retryCount = 0;
+        this.nextRetryAt = Instant.now();
+        this.leaseExpiresAt = null;
+    }
+
+    public String getDeliveryStatus() {
+        return deliveryStatus;
     }
 }
