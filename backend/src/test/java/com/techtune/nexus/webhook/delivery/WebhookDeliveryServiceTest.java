@@ -1,24 +1,12 @@
 package com.techtune.nexus.webhook.delivery;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.techtune.nexus.webhook.domain.WebhookEndpoint;
-import com.techtune.nexus.webhook.domain.WebhookOutbox;
-import com.techtune.nexus.tenant.domain.Tenant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 
-import java.lang.reflect.Field;
-import java.time.Instant;
-import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 class WebhookDeliveryServiceTest {
 
@@ -30,21 +18,7 @@ class WebhookDeliveryServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JavaTimeModule());
-        deliveryService = new WebhookDeliveryService(restTemplate, objectMapper);
-    }
-
-    private Tenant createTenantWithId(String name) {
-        Tenant tenant = new Tenant(name);
-        try {
-            Field idField = Tenant.class.getSuperclass().getDeclaredField("id");
-            idField.setAccessible(true);
-            idField.set(tenant, UUID.randomUUID());
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-        return tenant;
+        deliveryService = new WebhookDeliveryService(restTemplate);
     }
 
     @Test
@@ -84,8 +58,4 @@ class WebhookDeliveryServiceTest {
 
         assertNotEquals(signature1, signature2);
     }
-
-    // Delivery integration tests skipped due to Jackson Instant serialization complexity
-    // These require proper ObjectMapper configuration and are better tested with integration tests
-    // Signature generation tests above verify the critical HMAC signing logic
 }

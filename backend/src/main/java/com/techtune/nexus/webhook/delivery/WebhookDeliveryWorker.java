@@ -35,7 +35,7 @@ public class WebhookDeliveryWorker {
         this.deliveryService = deliveryService;
     }
 
-    @Scheduled(fixedDelayString = "${nexus.webhook.polling-interval:30000}")
+    @Scheduled(fixedDelayString = "${nexus.webhook.delivery.polling-interval:30000}")
     @Transactional
     public void processPendingWebhooks() {
         Instant now = Instant.now();

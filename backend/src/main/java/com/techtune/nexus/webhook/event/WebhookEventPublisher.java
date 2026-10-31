@@ -1,6 +1,6 @@
 package com.techtune.nexus.webhook.event;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.techtune.nexus.job.domain.Job;
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
 import com.techtune.nexus.webhook.persistence.WebhookOutboxRepository;
@@ -18,17 +18,15 @@ public class WebhookEventPublisher {
     private static final Logger logger = LoggerFactory.getLogger(WebhookEventPublisher.class);
 
     private final WebhookOutboxRepository webhookOutboxRepository;
-    private final ObjectMapper objectMapper;
 
-    public WebhookEventPublisher(WebhookOutboxRepository webhookOutboxRepository, ObjectMapper objectMapper) {
+    public WebhookEventPublisher(WebhookOutboxRepository webhookOutboxRepository) {
         this.webhookOutboxRepository = webhookOutboxRepository;
-        this.objectMapper = objectMapper;
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
     public void publishJobCompleted(Job job) {
         try {
-            String payload = objectMapper.writeValueAsString(job.getPayload());
+            String payload = jsonNodeToString(job.getPayload());
             WebhookEvent event = WebhookEvent.jobCompleted(
                     job.getTenant().getId(),
                     job.getId(),
@@ -44,7 +42,7 @@ public class WebhookEventPublisher {
     @Transactional(propagation = Propagation.MANDATORY)
     public void publishJobFailed(Job job, String errorMessage) {
         try {
-            String payload = objectMapper.writeValueAsString(job.getPayload());
+            String payload = jsonNodeToString(job.getPayload());
             WebhookEvent event = WebhookEvent.jobFailed(
                     job.getTenant().getId(),
                     job.getId(),
@@ -61,7 +59,7 @@ public class WebhookEventPublisher {
     @Transactional(propagation = Propagation.MANDATORY)
     public void publishJobCancelled(Job job) {
         try {
-            String payload = objectMapper.writeValueAsString(job.getPayload());
+            String payload = jsonNodeToString(job.getPayload());
             WebhookEvent event = WebhookEvent.jobCancelled(
                     job.getTenant().getId(),
                     job.getId(),
@@ -75,7 +73,7 @@ public class WebhookEventPublisher {
     }
 
     private void createOutboxEntry(Job job, WebhookEvent event) throws Exception {
-        String payload = objectMapper.writeValueAsString(event);
+        String payload = event.toString();
         
         // Create outbox entry - the delivery worker will match to endpoints
         WebhookOutbox outbox = new WebhookOutbox(
@@ -91,5 +89,12 @@ public class WebhookEventPublisher {
         webhookOutboxRepository.save(outbox);
         logger.info("Created webhook outbox entry {} for job {} with event type {}", 
                 outbox.getId(), job.getId(), event.eventType());
+    }
+
+    private String jsonNodeToString(JsonNode jsonNode) {
+        if (jsonNode == null) {
+            return "{}";
+        }
+        return jsonNode.toString();
     }
 }
