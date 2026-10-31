@@ -32,11 +32,11 @@ public class AuthController {
     public AuthController(UserService userService,
                            TenantRepository tenantRepository,
                            UserTenantMembershipRepository membershipRepository,
-                           EmailService emailService) {
+                           org.springframework.beans.factory.ObjectProvider<EmailService> emailServiceProvider) {
         this.userService = userService;
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
-        this.emailService = emailService;
+        this.emailService = emailServiceProvider.getIfAvailable();
     }
 
     @PostMapping("/register")
@@ -98,7 +98,7 @@ public class AuthController {
     @PostMapping("/forgot-password")
     @Operation(summary = "Request password reset")
     public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
-        if (!emailService.isEmailConfigured()) {
+        if (emailService == null || !emailService.isEmailConfigured()) {
             return ResponseEntity.status(503).body(Map.of("error", "Email service not configured"));
         }
 
