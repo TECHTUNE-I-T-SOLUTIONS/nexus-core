@@ -3,6 +3,7 @@ package com.techtune.nexus.webhook.delivery;
 import com.techtune.nexus.webhook.application.WebhookEndpointService;
 import com.techtune.nexus.webhook.domain.WebhookEndpoint;
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
+import com.techtune.nexus.webhook.metrics.WebhookDeliveryMetrics;
 import com.techtune.nexus.webhook.persistence.WebhookOutboxRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,14 +26,37 @@ public class WebhookDeliveryWorker {
     private final WebhookOutboxRepository webhookOutboxRepository;
     private final WebhookEndpointService webhookEndpointService;
     private final WebhookDeliveryService deliveryService;
+    private final WebhookDeliveryMetrics metrics;
 
     public WebhookDeliveryWorker(
             WebhookOutboxRepository webhookOutboxRepository,
             WebhookEndpointService webhookEndpointService,
-            WebhookDeliveryService deliveryService) {
+            WebhookDeliveryService deliveryService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) WebhookDeliveryMetrics metrics) {
         this.webhookOutboxRepository = webhookOutboxRepository;
         this.webhookEndpointService = webhookEndpointService;
         this.deliveryService = deliveryService;
+        this.metrics = metrics != null ? metrics : new NoOpMetrics();
+    }
+
+    // No-op metrics implementation
+    private static class NoOpMetrics extends WebhookDeliveryMetrics {
+        public NoOpMetrics() {
+            super(io.micrometer.core.instrument.Metrics.globalRegistry);
+        }
+
+        @Override
+        public void recordDeliverySuccess() {}
+        @Override
+        public void recordDeliveryFailure() {}
+        @Override
+        public void recordDeliveryRetry() {}
+        @Override
+        public void recordDeadLetterTransition() {}
+        @Override
+        public void recordLeaseRecovery() {}
+        @Override
+        public void recordDeliveryLatency(java.time.Duration latency) {}
     }
 
     @Scheduled(fixedDelayString = "${nexus.webhook.delivery.polling-interval:30000}")
@@ -51,7 +75,8 @@ public class WebhookDeliveryWorker {
                 );
                 
                 if (claimed == 0) {
-                    // Another worker claimed it
+                    // Another worker claimed it - this was likely a lease recovery
+                    metrics.recordLeaseRecovery();
                     continue;
                 }
 
@@ -89,8 +114,10 @@ public class WebhookDeliveryWorker {
                 
                 if (outbox.isRetryable()) {
                     outbox.scheduleRetry(calculateNextRetry(outbox.getRetryCount()));
+                    metrics.recordDeliveryRetry();
                 } else {
                     outbox.setErrorMessage("Max retries exceeded: " + e.getMessage());
+                    metrics.recordDeadLetterTransition();
                 }
                 webhookOutboxRepository.save(outbox);
             }
