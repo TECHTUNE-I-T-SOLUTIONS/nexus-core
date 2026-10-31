@@ -45,6 +45,7 @@ public class JobService {
         if (idempotencyKey != null) {
             job.setIdempotencyKey(idempotencyKey);
         }
+        job.queue(); // Queue the job for execution
         return jobRepository.save(job);
     }
 
@@ -122,7 +123,8 @@ public class JobService {
     public Job retryJob(UUID jobId, Instant scheduledAt) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
-        job.retry(scheduledAt);
+        job.scheduleRetry(scheduledAt);
+        job.retry();
         return jobRepository.save(job);
     }
 

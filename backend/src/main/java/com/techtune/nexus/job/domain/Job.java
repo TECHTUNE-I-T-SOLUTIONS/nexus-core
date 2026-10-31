@@ -260,11 +260,19 @@ public class Job extends UuidIdentity {
             this.completedAt = Instant.now();
         } else {
             this.status = JobStatus.RETRY_WAIT;
+            // Note: scheduledAt will be set by the retry logic
         }
     }
 
+    public void scheduleRetry(Instant scheduledAt) {
+        if (status != JobStatus.RETRY_WAIT) {
+            throw new IllegalStateException("Can only schedule retry for jobs in RETRY_WAIT state");
+        }
+        this.scheduledAt = scheduledAt;
+    }
+
     public void cancel() {
-        if (status == JobStatus.SUCCEEDED || status == JobStatus.FAILED || status == JobStatus.DEAD_LETTERED) {
+        if (status == JobStatus.SUCCEEDED || status == JobStatus.DEAD_LETTERED) {
             throw new IllegalStateException("Cannot cancel completed jobs");
         }
         this.status = JobStatus.CANCELLED;
@@ -272,12 +280,11 @@ public class Job extends UuidIdentity {
         this.leaseExpiresAt = null;
     }
 
-    public void retry(Instant scheduledAt) {
-        if (status != JobStatus.FAILED && status != JobStatus.DEAD_LETTERED) {
-            throw new IllegalStateException("Can only retry failed or dead_lettered jobs");
+    public void retry() {
+        if (status != JobStatus.RETRY_WAIT) {
+            throw new IllegalStateException("Can only retry jobs in RETRY_WAIT state");
         }
         this.status = JobStatus.QUEUED;
-        this.scheduledAt = scheduledAt;
         this.lastErrorMessage = null;
         this.lastErrorDetails = null;
         this.completedAt = null;
