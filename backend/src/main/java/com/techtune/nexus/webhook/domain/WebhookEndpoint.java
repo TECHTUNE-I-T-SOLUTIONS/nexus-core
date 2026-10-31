@@ -29,6 +29,9 @@ public class WebhookEndpoint extends UuidIdentity {
     @Column(name = "is_enabled", nullable = false)
     private Boolean enabled = true;
 
+    @Column(name = "secret_encrypted", nullable = false)
+    private Boolean secretEncrypted = false;
+
     public WebhookEndpoint() {
     }
 
@@ -57,6 +60,14 @@ public class WebhookEndpoint extends UuidIdentity {
 
     public Boolean isEnabled() {
         return enabled;
+    }
+
+    public Boolean isSecretEncrypted() {
+        return secretEncrypted;
+    }
+
+    public void setSecretEncrypted(Boolean secretEncrypted) {
+        this.secretEncrypted = secretEncrypted;
     }
 
     public void setTenant(Tenant tenant) {

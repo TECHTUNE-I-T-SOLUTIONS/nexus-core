@@ -58,11 +58,13 @@ public class WebhookEndpointService {
         validateSecret(secret);
 
         String secretToStore = encryptionEnabled && encryptionService != null ? encryptionService.encrypt(secret) : secret;
+        boolean isEncrypted = encryptionEnabled && encryptionService != null;
 
         Tenant tenant = tenantService.findTenantById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
 
         WebhookEndpoint endpoint = new WebhookEndpoint(tenant, url, secretToStore, eventTypes);
+        endpoint.setSecretEncrypted(isEncrypted);
         return webhookEndpointRepository.save(endpoint);
     }
 
@@ -132,7 +134,9 @@ public class WebhookEndpointService {
         if (secret != null) {
             validateSecret(secret);
             String secretToStore = encryptionEnabled && encryptionService != null ? encryptionService.encrypt(secret) : secret;
+            boolean isEncrypted = encryptionEnabled && encryptionService != null;
             endpoint.setSecret(secretToStore);
+            endpoint.setSecretEncrypted(isEncrypted);
         }
         if (eventTypes != null) {
             endpoint.setEventTypes(eventTypes);
