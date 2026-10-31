@@ -2,12 +2,14 @@ package com.techtune.nexus.job.api;
 
 import com.techtune.nexus.job.application.JobService;
 import com.techtune.nexus.job.domain.Job;
+import com.techtune.nexus.user.application.AuthorizationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,9 +21,11 @@ import java.util.UUID;
 public class JobController {
 
     private final JobService jobService;
+    private final AuthorizationService authorizationService;
 
-    public JobController(JobService jobService) {
+    public JobController(JobService jobService, AuthorizationService authorizationService) {
         this.jobService = jobService;
+        this.authorizationService = authorizationService;
     }
 
     @PostMapping

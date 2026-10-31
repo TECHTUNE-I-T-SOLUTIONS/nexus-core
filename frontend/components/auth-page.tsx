@@ -5,7 +5,7 @@ import Image from "next/image"
 import { ArrowLeft, Eye, EyeOff, LockKeyhole } from "lucide-react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { loginUser, registerUser, forgotPassword } from "@/app/actions/auth"
+import { loginUser, registerUser, requestPasswordReset } from "@/app/actions/auth"
 
 export function AuthPage({ mode }: { mode: "login" | "signup" | "forgot" }) {
   const [showPassword, setShowPassword] = useState(false)
@@ -52,7 +52,7 @@ export function AuthPage({ mode }: { mode: "login" | "signup" | "forgot" }) {
           router.push("/dashboard")
         }
       } else if (mode === "forgot") {
-        const result = await forgotPassword({
+        const result = await requestPasswordReset({
           email: formData.get("email") as string,
         })
         if (!result.success) {

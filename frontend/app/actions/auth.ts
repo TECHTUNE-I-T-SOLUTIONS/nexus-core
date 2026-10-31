@@ -1,7 +1,7 @@
 "use server"
 
 import { cookies } from "next/headers"
-import { login, register, getCurrentUser, type LoginRequest, type RegisterRequest } from "@/lib/auth-client"
+import { login, register, getCurrentUser, forgotPassword, type LoginRequest, type RegisterRequest, type ForgotPasswordRequest } from "@/lib/auth-client"
 
 const API_URL = process.env.NEXUS_API_URL || "http://localhost:8080"
 
@@ -25,6 +25,15 @@ export async function registerUser(data: RegisterRequest) {
   try {
     const user = await register(data)
     return { success: true, user }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+}
+
+export async function requestPasswordReset(data: ForgotPasswordRequest) {
+  try {
+    await forgotPassword(data)
+    return { success: true }
   } catch (error: any) {
     return { success: false, error: error.message }
   }
