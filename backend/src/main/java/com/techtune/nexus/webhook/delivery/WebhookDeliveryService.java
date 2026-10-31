@@ -1,11 +1,13 @@
 package com.techtune.nexus.webhook.delivery;
 
 import com.techtune.nexus.webhook.SSRFProtection;
+import com.techtune.nexus.webhook.application.WebhookEndpointService;
 import com.techtune.nexus.webhook.domain.WebhookEndpoint;
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
 import com.techtune.nexus.webhook.event.WebhookEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
@@ -27,14 +29,18 @@ public class WebhookDeliveryService {
     private static final int RESPONSE_TIMEOUT_SECONDS = 30;
 
     private final RestTemplate restTemplate;
+    private final WebhookEndpointService webhookEndpointService;
 
-    public WebhookDeliveryService() {
+    @Autowired
+    public WebhookDeliveryService(WebhookEndpointService webhookEndpointService) {
+        this.webhookEndpointService = webhookEndpointService;
         this.restTemplate = createRestTemplate();
     }
 
     // Constructor for testing with mocked RestTemplate
-    public WebhookDeliveryService(RestTemplate restTemplate) {
+    public WebhookDeliveryService(RestTemplate restTemplate, WebhookEndpointService webhookEndpointService) {
         this.restTemplate = restTemplate;
+        this.webhookEndpointService = webhookEndpointService;
     }
 
     private RestTemplate createRestTemplate() {
@@ -49,9 +55,12 @@ public class WebhookDeliveryService {
             // Validate the target URL at connection time (DNS rebinding protection)
             validateDeliveryTarget(endpoint.getUrl());
 
+            // Decrypt secret for signature generation
+            String secret = webhookEndpointService.decryptSecret(endpoint.getSecret());
+
             String body = outbox.getPayload();
             WebhookEvent event = WebhookEvent.fromString(body);
-            String signature = generateSignature(endpoint.getSecret(), body);
+            String signature = generateSignature(secret, body);
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);

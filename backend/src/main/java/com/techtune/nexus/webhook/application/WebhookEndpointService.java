@@ -4,7 +4,9 @@ import com.techtune.nexus.tenant.application.TenantService;
 import com.techtune.nexus.tenant.domain.Tenant;
 import com.techtune.nexus.webhook.SSRFProtection;
 import com.techtune.nexus.webhook.domain.WebhookEndpoint;
+import com.techtune.nexus.webhook.encryption.SecretEncryptionService;
 import com.techtune.nexus.webhook.persistence.WebhookEndpointRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -20,10 +22,18 @@ public class WebhookEndpointService {
 
     private final WebhookEndpointRepository webhookEndpointRepository;
     private final TenantService tenantService;
+    private final SecretEncryptionService encryptionService;
+    private final boolean encryptionEnabled;
 
-    public WebhookEndpointService(WebhookEndpointRepository webhookEndpointRepository, TenantService tenantService) {
+    public WebhookEndpointService(
+            WebhookEndpointRepository webhookEndpointRepository,
+            TenantService tenantService,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) SecretEncryptionService encryptionService,
+            @Value("${nexus.webhook.encryption.enabled:false}") boolean encryptionEnabled) {
         this.webhookEndpointRepository = webhookEndpointRepository;
         this.tenantService = tenantService;
+        this.encryptionService = encryptionService;
+        this.encryptionEnabled = encryptionEnabled;
     }
 
     private UUID getAuthenticatedTenantId() {
@@ -47,10 +57,12 @@ public class WebhookEndpointService {
         validateWebhookUrl(url);
         validateSecret(secret);
 
+        String secretToStore = encryptionEnabled && encryptionService != null ? encryptionService.encrypt(secret) : secret;
+
         Tenant tenant = tenantService.findTenantById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
 
-        WebhookEndpoint endpoint = new WebhookEndpoint(tenant, url, secret, eventTypes);
+        WebhookEndpoint endpoint = new WebhookEndpoint(tenant, url, secretToStore, eventTypes);
         return webhookEndpointRepository.save(endpoint);
     }
 
@@ -119,7 +131,8 @@ public class WebhookEndpointService {
         }
         if (secret != null) {
             validateSecret(secret);
-            endpoint.setSecret(secret);
+            String secretToStore = encryptionEnabled && encryptionService != null ? encryptionService.encrypt(secret) : secret;
+            endpoint.setSecret(secretToStore);
         }
         if (eventTypes != null) {
             endpoint.setEventTypes(eventTypes);
@@ -190,5 +203,18 @@ public class WebhookEndpointService {
         if (secret.length() < 16) {
             throw new IllegalArgumentException("Webhook secret must be at least 16 characters");
         }
+    }
+
+    /**
+     * Decrypts the stored secret for use in webhook delivery.
+     * 
+     * @param encryptedSecret The encrypted secret from the database
+     * @return The plaintext secret
+     */
+    public String decryptSecret(String encryptedSecret) {
+        if (!encryptionEnabled || encryptionService == null) {
+            return encryptedSecret;
+        }
+        return encryptionService.decrypt(encryptedSecret);
     }
 }

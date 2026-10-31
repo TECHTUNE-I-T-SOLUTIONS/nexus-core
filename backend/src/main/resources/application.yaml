@@ -82,3 +82,6 @@ nexus:
       connection-timeout-seconds: 10
       response-timeout-seconds: 30
       lease-duration-seconds: 300
+    encryption:
+      enabled: ${WEBHOOK_ENCRYPTION_ENABLED:false}
+      key: ${WEBHOOK_ENCRYPTION_KEY:}
