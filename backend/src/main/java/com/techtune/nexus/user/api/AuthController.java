@@ -1,9 +1,11 @@
 package com.techtune.nexus.user.api;
 
 import com.techtune.nexus.user.application.UserService;
+import com.techtune.nexus.user.application.EmailService;
 import com.techtune.nexus.user.domain.User;
 import com.techtune.nexus.user.domain.UserTenantMembership;
 import com.techtune.nexus.user.domain.MembershipRole;
+import com.techtune.nexus.user.domain.PasswordResetToken;
 import com.techtune.nexus.tenant.domain.Tenant;
 import com.techtune.nexus.tenant.persistence.TenantRepository;
 import com.techtune.nexus.user.persistence.UserTenantMembershipRepository;
@@ -25,13 +27,16 @@ public class AuthController {
     private final UserService userService;
     private final TenantRepository tenantRepository;
     private final UserTenantMembershipRepository membershipRepository;
+    private final EmailService emailService;
 
     public AuthController(UserService userService,
                            TenantRepository tenantRepository,
-                           UserTenantMembershipRepository membershipRepository) {
+                           UserTenantMembershipRepository membershipRepository,
+                           EmailService emailService) {
         this.userService = userService;
         this.tenantRepository = tenantRepository;
         this.membershipRepository = membershipRepository;
+        this.emailService = emailService;
     }
 
     @PostMapping("/register")
@@ -90,10 +95,40 @@ public class AuthController {
         return ResponseEntity.ok(new UserResponse(principal.getUserId().toString(), principal.getEmail(), principal.getFullName()));
     }
 
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Request password reset")
+    public ResponseEntity<?> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        if (!emailService.isEmailConfigured()) {
+            return ResponseEntity.status(503).body(Map.of("error", "Email service not configured"));
+        }
+
+        try {
+            PasswordResetToken token = userService.createPasswordResetToken(request.email);
+            emailService.sendPasswordResetEmail(request.email, token.getToken());
+            return ResponseEntity.ok(Map.of("message", "Password reset email sent if email exists"));
+        } catch (IllegalArgumentException e) {
+            // Don't reveal if email exists
+            return ResponseEntity.ok(Map.of("message", "Password reset email sent if email exists"));
+        }
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(summary = "Reset password with token")
+    public ResponseEntity<?> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        try {
+            userService.resetPassword(request.token, request.newPassword);
+            return ResponseEntity.ok(Map.of("message", "Password reset successful"));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(400).body(Map.of("error", "Invalid or expired token"));
+        }
+    }
+
     record RegisterRequest(String email, String password, String fullName) {}
     record LoginRequest(String email, String password) {}
     record CreateTenantRequest(String tenantName) {}
     record LoginResponse(String token, UserResponse user) {}
+    record ForgotPasswordRequest(String email) {}
+    record ResetPasswordRequest(String token, String newPassword) {}
     
     record UserResponse(String id, String email, String fullName) {
         static UserResponse from(User user) {

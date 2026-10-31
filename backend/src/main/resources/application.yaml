@@ -88,3 +88,16 @@ nexus:
     rate-limit:
       max-requests: 100
       window-seconds: 60
+  auth:
+    email:
+      enabled: ${EMAIL_ENABLED:false}
+      provider: ${EMAIL_PROVIDER:zoho} # zoho, gmail, smtp
+      host: ${EMAIL_HOST:smtp.zoho.com}
+      port: ${EMAIL_PORT:587}
+      username: ${EMAIL_USERNAME:}
+      password: ${EMAIL_PASSWORD:}
+      from: ${EMAIL_FROM:noreply@yourdomain.com}
+      from-name: ${EMAIL_FROM_NAME:NEXUS CORE}
+      verification-enabled: ${EMAIL_VERIFICATION_ENABLED:false}
+      password-reset-enabled: ${EMAIL_PASSWORD_RESET_ENABLED:false}
+      token-expiration-minutes: ${EMAIL_TOKEN_EXPIRATION_MINUTES:30}

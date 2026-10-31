@@ -63,4 +63,8 @@ public class User extends UuidIdentity {
     public void setActive(Boolean active) {
         isActive = active;
     }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 }

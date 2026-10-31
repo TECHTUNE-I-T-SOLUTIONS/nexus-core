@@ -3,8 +3,10 @@ package com.techtune.nexus.user.application;
 import com.techtune.nexus.user.domain.User;
 import com.techtune.nexus.user.domain.UserTenantMembership;
 import com.techtune.nexus.user.domain.MembershipRole;
+import com.techtune.nexus.user.domain.PasswordResetToken;
 import com.techtune.nexus.user.persistence.UserRepository;
 import com.techtune.nexus.user.persistence.UserTenantMembershipRepository;
+import com.techtune.nexus.user.persistence.PasswordResetTokenRepository;
 import com.techtune.nexus.tenant.domain.Tenant;
 import com.techtune.nexus.tenant.persistence.TenantRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -23,15 +25,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserTenantMembershipRepository membershipRepository;
     private final TenantRepository tenantRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UserService(UserRepository userRepository,
                       UserTenantMembershipRepository membershipRepository,
                       TenantRepository tenantRepository,
+                      PasswordResetTokenRepository passwordResetTokenRepository,
                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.membershipRepository = membershipRepository;
         this.tenantRepository = tenantRepository;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -89,5 +94,40 @@ public class UserService {
 
     public User getUserById(UUID userId) {
         return userRepository.findById(userId).orElse(null);
+    }
+
+    public PasswordResetToken createPasswordResetToken(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+        
+        String token = UUID.randomUUID().toString();
+        Instant expiresAt = Instant.now().plusSeconds(30 * 60); // 30 minutes
+        
+        PasswordResetToken resetToken = new PasswordResetToken(user, token, expiresAt);
+        return passwordResetTokenRepository.save(resetToken);
+    }
+
+    public Optional<PasswordResetToken> validatePasswordResetToken(String token) {
+        Optional<PasswordResetToken> tokenOpt = passwordResetTokenRepository.findByToken(token);
+        if (tokenOpt.isEmpty()) {
+            return Optional.empty();
+        }
+        PasswordResetToken resetToken = tokenOpt.get();
+        if (resetToken.isExpired() || resetToken.isUsed()) {
+            return Optional.empty();
+        }
+        return Optional.of(resetToken);
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken resetToken = validatePasswordResetToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid or expired token"));
+        
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+        
+        resetToken.markAsUsed();
+        passwordResetTokenRepository.save(resetToken);
     }
 }
