@@ -1,6 +1,7 @@
 package com.techtune.nexus.security;
 
 import com.techtune.nexus.apikey.application.ApiKeyService;
+import com.techtune.nexus.security.auth.BasicTokenAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -16,17 +17,21 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfiguration {
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, ApiKeyAuthenticationFilter apiKeyFilter) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, 
+                                              ApiKeyAuthenticationFilter apiKeyFilter,
+                                              BasicTokenAuthenticationFilter tokenFilter) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/actuator/**").permitAll()
                 .requestMatchers("/api/v1/tenants").permitAll()
+                .requestMatchers("/api/v1/auth/**").permitAll()
                 .requestMatchers("/api-docs/**", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class);
+            .addFilterBefore(tokenFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(apiKeyFilter, BasicTokenAuthenticationFilter.class);
 
         return http.build();
     }
@@ -34,5 +39,10 @@ public class SecurityConfiguration {
     @Bean
     public ApiKeyAuthenticationFilter apiKeyAuthenticationFilter(ApiKeyService apiKeyService) {
         return new ApiKeyAuthenticationFilter(apiKeyService);
+    }
+
+    @Bean
+    public BasicTokenAuthenticationFilter basicTokenAuthenticationFilter(com.techtune.nexus.user.application.UserService userService) {
+        return new BasicTokenAuthenticationFilter(userService);
     }
 }
