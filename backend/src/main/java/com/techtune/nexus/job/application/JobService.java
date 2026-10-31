@@ -45,6 +45,7 @@ public class JobService {
         if (idempotencyKey != null) {
             job.setIdempotencyKey(idempotencyKey);
         }
+        job.queue(); // Queue the job for execution
         return jobRepository.save(job);
     }
 

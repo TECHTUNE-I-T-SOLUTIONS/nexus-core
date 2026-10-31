@@ -1,6 +1,6 @@
 package com.techtune.nexus.worker;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.techtune.nexus.job.application.JobService;
 import com.techtune.nexus.job.domain.Job;
@@ -10,17 +10,19 @@ import com.techtune.nexus.tenant.application.TenantService;
 import com.techtune.nexus.tenant.domain.Tenant;
 import com.techtune.nexus.tenant.persistence.TenantRepository;
 import com.techtune.nexus.worker.engine.JobClaimingService;
-import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -31,18 +33,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Testcontainers
-@TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:tc:postgresql:16-alpine:///nexus_core",
-    "spring.flyway.enabled=true",
-    "nexus.worker.enabled=false"
-})
-@Disabled("Integration tests disabled pending worker lifecycle completion")
 class JobClaimingConcurrencyTest {
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
             DockerImageName.parse("postgres:16-alpine")
     );
+
+    @DynamicPropertySource
+    static void postgresProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", postgres::getJdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.flyway.enabled", () -> "true");
+    }
 
     @Autowired
     private JobRepository jobRepository;
@@ -59,17 +63,21 @@ class JobClaimingConcurrencyTest {
     @Autowired
     private JobService jobService;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @AfterEach
+    void tearDown() {
+        jobRepository.deleteAll();
+        tenantRepository.deleteAll();
+    }
 
     @Test
     void shouldPreventDuplicateClaimingWithConcurrentWorkers() throws InterruptedException {
-        // Create tenant
-        Tenant tenant = tenantService.createTenant("Test Tenant");
+        // Create tenant with unique name
+        String tenantName = "Test Tenant " + UUID.randomUUID();
+        Tenant tenant = tenantService.createTenant(tenantName);
 
         // Create 10 jobs
         int jobCount = 10;
-        ObjectNode payload = objectMapper.createObjectNode();
+        ObjectNode payload = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
         for (int i = 0; i < jobCount; i++) {
             jobService.createJob(tenant.getId(), "test-job", payload, 5, null, 3, 60, null);
         }
@@ -116,12 +124,13 @@ class JobClaimingConcurrencyTest {
 
     @Test
     void shouldRespectBatchSizeInDatabase() {
-        // Create tenant
-        Tenant tenant = tenantService.createTenant("Test Tenant");
+        // Create tenant with unique name
+        String tenantName = "Test Tenant " + UUID.randomUUID();
+        Tenant tenant = tenantService.createTenant(tenantName);
 
         // Create 20 jobs
         int jobCount = 20;
-        ObjectNode payload = objectMapper.createObjectNode();
+        ObjectNode payload = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
         for (int i = 0; i < jobCount; i++) {
             jobService.createJob(tenant.getId(), "test-job", payload, 5, null, 3, 60, null);
         }
@@ -142,12 +151,14 @@ class JobClaimingConcurrencyTest {
 
     @Test
     void shouldRespectTenantIsolation() {
-        // Create two tenants
-        Tenant tenant1 = tenantService.createTenant("Tenant 1");
-        Tenant tenant2 = tenantService.createTenant("Tenant 2");
+        // Create two tenants with unique names
+        String tenantName1 = "Tenant 1 " + UUID.randomUUID();
+        String tenantName2 = "Tenant 2 " + UUID.randomUUID();
+        Tenant tenant1 = tenantService.createTenant(tenantName1);
+        Tenant tenant2 = tenantService.createTenant(tenantName2);
 
         // Create jobs for tenant 1
-        ObjectNode payload = objectMapper.createObjectNode();
+        ObjectNode payload = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
         for (int i = 0; i < 5; i++) {
             jobService.createJob(tenant1.getId(), "test-job", payload, 5, null, 3, 60, null);
         }

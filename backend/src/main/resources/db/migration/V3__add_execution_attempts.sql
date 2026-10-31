@@ -10,7 +10,8 @@ CREATE TABLE job_execution_attempts (
     error_message TEXT,
     error_details TEXT,
     lease_expires_at TIMESTAMP,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_job_execution_attempts_job_id ON job_execution_attempts(job_id);
