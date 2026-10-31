@@ -1,10 +1,13 @@
 package com.techtune.nexus.webhook.api;
 
+import com.techtune.nexus.webhook.application.WebhookDeliveryManagementService;
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
-import com.techtune.nexus.webhook.persistence.WebhookOutboxRepository;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -12,51 +15,43 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/webhook-deliveries")
+@Tag(name = "Webhook Deliveries", description = "Webhook delivery management and dead-letter replay")
 public class WebhookDeliveryController {
 
-    private final WebhookOutboxRepository webhookOutboxRepository;
+    private final WebhookDeliveryManagementService deliveryManagementService;
 
-    public WebhookDeliveryController(WebhookOutboxRepository webhookOutboxRepository) {
-        this.webhookOutboxRepository = webhookOutboxRepository;
+    public WebhookDeliveryController(WebhookDeliveryManagementService deliveryManagementService) {
+        this.deliveryManagementService = deliveryManagementService;
     }
 
-    private UUID getAuthenticatedTenantId() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.isAuthenticated()) {
-            Object principal = auth.getPrincipal();
-            if (principal instanceof UUID) {
-                return (UUID) principal;
-            }
-        }
-        return null;
+    @GetMapping
+    @PreAuthorize("hasAuthority('SCOPE_webhooks:read')")
+    @Operation(summary = "List webhook deliveries for a tenant")
+    public ResponseEntity<List<WebhookDeliveryResponse>> listDeliveries(
+            @RequestParam UUID tenantId,
+            @RequestParam(required = false) String deliveryStatus) {
+        List<WebhookOutbox> deliveries = deliveryManagementService.listDeliveries(tenantId, deliveryStatus);
+        return ResponseEntity.ok(deliveries.stream().map(WebhookDeliveryResponse::from).toList());
     }
 
-    @GetMapping("/dead-lettered")
-    @Transactional(readOnly = true)
-    public List<WebhookOutbox> getDeadLetteredDeliveries() {
-        UUID tenantId = getAuthenticatedTenantId();
-        if (tenantId == null) {
-            throw new IllegalArgumentException("Authentication required");
-        }
-        return webhookOutboxRepository.findDeadLetteredByTenant(tenantId);
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('SCOPE_webhooks:read')")
+    @Operation(summary = "Get a webhook delivery")
+    public ResponseEntity<WebhookDeliveryResponse> getDelivery(@PathVariable UUID id) {
+        WebhookOutbox delivery = deliveryManagementService.getDelivery(id);
+        return ResponseEntity.ok(WebhookDeliveryResponse.from(delivery));
     }
 
-    @PostMapping("/{id}/retry")
-    @Transactional
-    public WebhookOutbox retryDelivery(@PathVariable UUID id) {
-        WebhookOutbox outbox = webhookOutboxRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Webhook delivery not found: " + id));
+    @PostMapping("/{id}/replay")
+    @PreAuthorize("hasAuthority('SCOPE_webhooks:write')")
+    @Operation(summary = "Replay a dead-lettered webhook delivery")
+    public ResponseEntity<WebhookDeliveryResponse> replayDelivery(@PathVariable UUID id, Authentication auth) {
+        UUID tenantId = extractTenantId(auth);
+        WebhookOutbox delivery = deliveryManagementService.replayDelivery(id, tenantId);
+        return ResponseEntity.ok(WebhookDeliveryResponse.from(delivery));
+    }
 
-        UUID authenticatedTenantId = getAuthenticatedTenantId();
-        if (authenticatedTenantId != null && !authenticatedTenantId.equals(outbox.getTenant().getId())) {
-            throw new IllegalArgumentException("Cannot access webhook deliveries from other tenants");
-        }
-
-        if (!"DEAD_LETTER".equals(outbox.getDeliveryStatus())) {
-            throw new IllegalArgumentException("Can only retry dead-lettered deliveries");
-        }
-
-        outbox.markForRetry();
-        return webhookOutboxRepository.save(outbox);
+    private UUID extractTenantId(Authentication auth) {
+        return UUID.fromString(auth.getName());
     }
 }

@@ -30,5 +30,8 @@ public interface WebhookOutboxRepository extends JpaRepository<WebhookOutbox, UU
     @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveryStatus = 'DEAD_LETTER' AND w.tenant.id = :tenantId")
     List<WebhookOutbox> findDeadLetteredByTenant(@Param("tenantId") UUID tenantId);
 
+    @Query("SELECT w FROM WebhookOutbox w WHERE w.tenant.id = :tenantId")
+    List<WebhookOutbox> findByTenantId(@Param("tenantId") UUID tenantId);
+
     List<WebhookOutbox> findByJobId(UUID jobId);
 }
