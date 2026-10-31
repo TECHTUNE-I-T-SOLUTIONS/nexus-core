@@ -1,14 +1,19 @@
 package com.techtune.nexus.webhook.delivery;
 
+import com.techtune.nexus.webhook.SSRFProtection;
 import com.techtune.nexus.webhook.domain.WebhookEndpoint;
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
 import com.techtune.nexus.webhook.event.WebhookEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.*;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.InetAddress;
+import java.net.URI;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
@@ -24,7 +29,7 @@ public class WebhookDeliveryService {
     private final RestTemplate restTemplate;
 
     public WebhookDeliveryService() {
-        this.restTemplate = new RestTemplate();
+        this.restTemplate = createRestTemplate();
     }
 
     // Constructor for testing with mocked RestTemplate
@@ -32,8 +37,18 @@ public class WebhookDeliveryService {
         this.restTemplate = restTemplate;
     }
 
+    private RestTemplate createRestTemplate() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(CONNECTION_TIMEOUT_SECONDS * 1000);
+        factory.setReadTimeout(RESPONSE_TIMEOUT_SECONDS * 1000);
+        return new RestTemplate(factory);
+    }
+
     public DeliveryResult deliver(WebhookEndpoint endpoint, WebhookOutbox outbox) {
         try {
+            // Validate the target URL at connection time (DNS rebinding protection)
+            validateDeliveryTarget(endpoint.getUrl());
+
             String body = outbox.getPayload();
             WebhookEvent event = WebhookEvent.fromString(body);
             String signature = generateSignature(endpoint.getSecret(), body);
@@ -63,6 +78,27 @@ public class WebhookDeliveryService {
         } catch (Exception e) {
             logger.error("Webhook delivery failed", e);
             return new DeliveryResult(false, null, e.getMessage(), null);
+        }
+    }
+
+    private void validateDeliveryTarget(String url) {
+        try {
+            URI uri = new URI(url);
+            String host = uri.getHost();
+            
+            // Re-validate at connection time to prevent DNS rebinding
+            if (!SSRFProtection.isSafeHost(host)) {
+                throw new SecurityException("Webhook target resolved to blocked address: " + host);
+            }
+            
+            // Additional validation: resolve and check the actual IP
+            InetAddress address = InetAddress.getByName(host);
+            if (!SSRFProtection.isSafeAddress(address)) {
+                throw new SecurityException("Webhook target IP is blocked: " + address.getHostAddress());
+            }
+            
+        } catch (Exception e) {
+            throw new SecurityException("Failed to validate webhook delivery target: " + e.getMessage(), e);
         }
     }
 
