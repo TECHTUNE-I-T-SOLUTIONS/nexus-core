@@ -403,12 +403,14 @@ We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guid
 - Job submission and management APIs
 - Tenant isolation
 
-### Phase 3: Execution Engine
+### Phase 3: Execution Engine ✅
 - Worker engine
 - Job claiming with row-level locking
 - Handler registry
+- Lease management and recovery
+- Execution attempt tracking
 
-### Phase 4: Scheduling & Retries
+### Phase 4: Scheduling & Retries (Next)
 - Cron scheduling
 - Retry policies
 - Backoff strategies
