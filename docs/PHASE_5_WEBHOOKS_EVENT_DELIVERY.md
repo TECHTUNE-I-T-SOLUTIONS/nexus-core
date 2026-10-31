@@ -75,14 +75,18 @@ Implement webhook endpoint management, event generation, transactional outbox pa
 - Manual retry support for dead-lettered events
 
 ### HMAC Signing
-- Algorithm: SHA-256 hash (note: currently `SHA-256(secret + payload)`, not standard HMAC)
+- Algorithm: HMAC-SHA256 (standard cryptographic algorithm)
+- Signature: Base64(HMAC-SHA256(secret, payload))
+- Payload: Exact HTTP request body bytes (UTF-8 string)
 - Headers:
   - `X-Webhook-Id`: Outbox entry ID
-  - `X-Webhook-Signature`: Base64-encoded signature
+  - `X-Webhook-Signature`: Base64-encoded HMAC-SHA256 signature
   - `X-Webhook-Timestamp`: Delivery timestamp
   - `X-Webhook-Event`: Event type
   - `X-Webhook-Event-Version`: Event version
   - `X-Webhook-Delivery`: Delivery ID
+- **Consumer Verification**: Use standard HMAC-SHA256 with the same secret and payload bytes to verify
+- **Breaking Change**: Previous implementation used non-standard `SHA-256(secret + payload)`
 
 ### SSRF Protections
 - URL scheme validation (HTTP/HTTPS only)
@@ -96,7 +100,7 @@ Implement webhook endpoint management, event generation, transactional outbox pa
 - Cloud metadata endpoint rejection (169.254.169.254, metadata.google.internal, etc.)
 - Port validation (80-65535)
 - DNS resolution validation at connection time (DNS rebinding protection)
-- **Limitation**: RestTemplate follows redirects by default; deployment-level egress controls recommended
+- **Redirect Blocking**: HTTP 3xx responses are treated as failures and not followed
 
 ### Secret Encryption
 - AES-GCM encryption for webhook secrets at rest
@@ -105,6 +109,11 @@ Implement webhook endpoint management, event generation, transactional outbox pa
 - Opt-in via configuration (`nexus.webhook.encryption.enabled=true`)
 - Migration-safe: existing plaintext secrets remain functional
 - Encryption flag tracked in database for decryption decision
+- **Migration Command**: Run `SecretEncryptionMigration` to encrypt existing plaintext secrets
+  - Set `nexus.webhook.encryption.enabled=true` and `nexus.webhook.encryption.key`
+  - Command auto-runs on startup when encryption is enabled
+  - Verifies decryption before committing
+  - Safe to rerun (skips already-encrypted records)
 
 ### Rate Limiting
 - Sliding window algorithm per tenant
@@ -152,6 +161,11 @@ nexus:
 - `PUT /api/v1/webhook-endpoints/{id}` - Update endpoint (requires `webhooks:write`, rate limited)
 - `DELETE /api/v1/webhook-endpoints/{id}` - Delete endpoint (requires `webhooks:write`, rate limited)
 
+### Webhook Deliveries
+- `GET /api/v1/webhook-deliveries` - List deliveries by tenant (requires `webhooks:read`)
+- `GET /api/v1/webhook-deliveries/{id}` - Get delivery details (requires `webhooks:read`)
+- `POST /api/v1/webhook-deliveries/{id}/replay` - Replay dead-lettered delivery (requires `webhooks:write`, tenant-scoped)
+
 ## Security
 
 ### Authentication & Authorization
@@ -164,9 +178,9 @@ nexus:
 - Secrets can be stored plaintext or encrypted (opt-in)
 - Secrets never returned in list responses
 - Secrets validated to be minimum 16 characters
-- Secrets used for signature generation
+- Secrets used for HMAC-SHA256 signature generation
 - Encryption flag tracks whether secret is encrypted
-- **Note**: Current signature uses SHA-256(secret + payload), not standard HMAC
+- Migration command available to encrypt existing plaintext secrets
 
 ### SSRF Protections
 - URL scheme validation (HTTP/HTTPS only)
@@ -180,7 +194,7 @@ nexus:
 - Cloud metadata endpoint rejection (169.254.169.254, metadata.google.internal, etc.)
 - Port validation (80-65535)
 - DNS resolution validation at connection time
-- **Limitation**: RestTemplate follows redirects by default; deployment-level egress controls recommended
+- Redirect blocking: HTTP 3xx responses are treated as failures
 
 ### Rate Limiting
 - Per-tenant sliding window rate limiting
@@ -191,26 +205,24 @@ nexus:
 ## Limitations
 
 ### SSRF Protection
-- RestTemplate follows redirects by default (not blocked)
-- Deployment-level egress controls recommended for production
 - DNS rebinding protection is at connection time, not continuously validated
 
 ### Event Delivery
 - No guaranteed ordering of events
 - At-least-once delivery semantics (duplicates possible)
 - Receivers must implement idempotency
-- Dead-letter queue exists but manual replay API not fully implemented
 
 ### Rate Limiting
 - In-memory only (not cluster-wide)
 - For multi-instance deployments, use Redis or distributed cache
 
 ### HMAC Signing
-- Currently uses SHA-256(secret + payload), not standard HMAC-SHA256
-- Consider upgrading to standard HMAC for better security
+- Standard HMAC-SHA256 is now implemented
+- **Breaking Change**: Previous implementation used non-standard SHA-256(secret + payload)
+- Consumers must update signature verification to use standard HMAC-SHA256
 
 ### Testing
-- Full test suite passing (102 tests)
+- Full test suite passing (122 tests)
 - PostgreSQL/Testcontainers integration tests validated
 - One test skipped (intentional)
 
@@ -227,6 +239,13 @@ nexus:
 - Default value: FALSE (existing secrets plaintext)
 - Safe for upgrades (uses IF NOT EXISTS)
 - Supports mixed plaintext/encrypted secrets
+- To enable encryption:
+  1. Set `nexus.webhook.encryption.enabled=true`
+  2. Set `nexus.webhook.encryption.key` to a secure key (recommended: 32+ random characters)
+  3. Run the application (SecretEncryptionMigration auto-runs on startup)
+  4. Migration encrypts all existing plaintext secrets
+  5. Verify migration completed successfully in logs
+  6. Existing plaintext secrets remain functional until migration runs
 
 ## Dependencies
 
