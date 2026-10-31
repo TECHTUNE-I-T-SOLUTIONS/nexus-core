@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +25,7 @@ public class JobController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('SCOPE_jobs:write')")
     @Operation(summary = "Create a new job")
     public ResponseEntity<JobResponse> createJob(@Valid @RequestBody CreateJobRequest request) {
         Job job = jobService.createJob(
@@ -40,6 +42,7 @@ public class JobController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAuthority('SCOPE_jobs:read')")
     @Operation(summary = "Get job by ID")
     public ResponseEntity<JobResponse> getJob(@PathVariable UUID id) {
         Job job = jobService.getJob(id);
@@ -47,6 +50,7 @@ public class JobController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('SCOPE_jobs:read')")
     @Operation(summary = "List jobs")
     public ResponseEntity<List<JobResponse>> listJobs(
             @RequestParam(required = false) UUID tenantId,
@@ -57,6 +61,7 @@ public class JobController {
     }
 
     @PostMapping("/{id}/cancel")
+    @PreAuthorize("hasAuthority('SCOPE_jobs:cancel')")
     @Operation(summary = "Cancel a job")
     public ResponseEntity<JobResponse> cancelJob(@PathVariable UUID id) {
         Job job = jobService.cancelJob(id);
@@ -64,6 +69,7 @@ public class JobController {
     }
 
     @PostMapping("/{id}/retry")
+    @PreAuthorize("hasAuthority('SCOPE_jobs:retry')")
     @Operation(summary = "Retry a failed or dead-lettered job")
     public ResponseEntity<JobResponse> retryJob(@PathVariable UUID id) {
         Job job = jobService.retryJob(id);
