@@ -1,5 +1,6 @@
+import Image from "next/image"
 import Link from "next/link"
-import { ArrowRight, Check, Clock3, Code2, LockKeyhole, Play, RotateCcw, Webhook, Zap } from "lucide-react"
+import { ArrowRight, Check, Clock3, Code2, LockKeyhole, RotateCcw, Webhook, Zap } from "lucide-react"
 
 const features = [
   [Zap, "Durable job processing", "Persist work in PostgreSQL, then let workers execute and recover it without coupling your request path to execution."],
@@ -9,10 +10,10 @@ const features = [
 ]
 
 export function SiteHeader() {
-  return <header className="site-header"><Link href="/" className="brand"><span className="brand-mark"><Zap /></span><span><strong>NEXUS</strong><small>CORE</small></span></Link><nav className="site-nav"><a href="#features">Features</a><Link href="/use-cases">Use cases</Link><Link href="/docs">Docs</Link></nav><div className="header-actions"><Link href="/login" className="header-link">Sign in</Link><Link href="/signup" className="button button-primary button-small">Get started <ArrowRight /></Link></div></header>
+  return <header className="site-header"><Link href="/" className="brand"><span className="brand-mark"><Image src="/logo.png" alt="NEXUS CORE" width={36} height={36} /></span><span><strong>NEXUS</strong><small>CORE</small></span></Link><nav className="site-nav"><a href="#features">Features</a><Link href="/use-cases">Use cases</Link><Link href="/docs">Docs</Link></nav><div className="header-actions"><Link href="/login" className="header-link">Sign in</Link><Link href="/signup" className="button button-primary button-small">Get started <ArrowRight /></Link></div></header>
 }
 
-export function SiteFooter() { return <footer className="site-footer"><div className="brand"><span className="brand-mark"><Zap /></span><span><strong>NEXUS</strong><small>CORE</small></span></div><p>Developer-first infrastructure for persistent work.</p><div className="footer-links"><Link href="/features">Features</Link><Link href="/docs">Documentation</Link><Link href="/login">Sign in</Link></div></footer> }
+export function SiteFooter() { return <footer className="site-footer"><div className="brand"><span className="brand-mark"><Image src="/logo.png" alt="NEXUS CORE" width={36} height={36} /></span><span><strong>NEXUS</strong><small>CORE</small></span></div><p>Developer-first infrastructure for persistent work.</p><div className="footer-links"><Link href="/features">Features</Link><Link href="/docs">Documentation</Link><Link href="/login">Sign in</Link></div></footer> }
 
 export function MarketingShell({ children }: { children: React.ReactNode }) { return <div className="marketing-shell"><SiteHeader />{children}<SiteFooter /></div> }
 
@@ -25,6 +26,6 @@ export function LandingPage() {
   </main></MarketingShell>
 }
 
-function ProductPreview() { return <div className="product-preview"><div className="preview-top"><span className="traffic"><i /><i /><i /></span><span className="mono">app.nexuscore.dev / overview</span><span className="preview-live"><span className="status-dot" /> API state</span></div><div className="preview-body"><aside><div className="preview-logo"><Zap /> NEXUS CORE</div>{["Overview", "Jobs", "Schedules", "Webhooks"].map((item, index) => <div className={index === 0 ? "preview-nav active" : "preview-nav"} key={item}>{item}</div>)}</aside><div className="preview-content"><div className="preview-title"><div><span className="mono muted">OPERATIONS WORKSPACE</span><h3>Overview</h3></div><span className="pill">Awaiting API</span></div><div className="preview-metrics">{["Jobs processed", "Success rate", "Avg. execution"].map(item => <div className="preview-metric" key={item}><span>{item}</span><strong>—</strong><small>Not connected</small></div>)}</div><div className="preview-chart"><div className="chart-line" /><div className="chart-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>Now</span></div></div></div></div></div> }
+function ProductPreview() { return <div className="product-preview"><div className="preview-top"><span className="traffic"><i /><i /><i /></span><span className="mono">app.nexuscore.dev / overview</span><span className="preview-live"><span className="status-dot" /> API state</span></div><div className="preview-body"><aside><div className="preview-logo"><Image src="/logo.png" alt="" width={22} height={22} /> NEXUS CORE</div>{["Overview", "Jobs", "Schedules", "Webhooks"].map((item, index) => <div className={index === 0 ? "preview-nav active" : "preview-nav"} key={item}>{item}</div>)}</aside><div className="preview-content"><div className="preview-title"><div><span className="mono muted">OPERATIONS WORKSPACE</span><h3>Overview</h3></div><span className="pill">Awaiting API</span></div><div className="preview-metrics">{["Jobs processed", "Success rate", "Avg. execution"].map(item => <div className="preview-metric" key={item}><span>{item}</span><strong>—</strong><small>Not connected</small></div>)}</div><div className="preview-chart"><div className="chart-line" /><div className="chart-labels"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span><span>Now</span></div></div></div></div></div> }
 
 export function CapabilityPage({ title, intro, items }: { title: string; intro: string; items: { title: string; copy: string }[] }) { return <MarketingShell><main className="inner-page"><div className="inner-hero"><span className="eyebrow">NEXUS CORE platform</span><h1>{title}</h1><p>{intro}</p></div><div className="capability-list">{items.map((item, index) => <article key={item.title}><span className="list-number">0{index + 1}</span><div><h2>{item.title}</h2><p>{item.copy}</p></div><Check /></article>)}</div></main></MarketingShell> }

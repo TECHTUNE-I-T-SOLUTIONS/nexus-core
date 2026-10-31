@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import { useMemo, useState } from "react"
 import { Activity, AlertTriangle, BarChart3, Bell, CheckCircle2, ChevronDown, CircleHelp, Clock3, Code2, ExternalLink, FileText, Gauge, Layers3, ListChecks, MoreHorizontal, Package, Play, Plus, Search, Server, Settings2, ShieldCheck, Terminal, Webhook, XCircle, Zap } from "lucide-react"
 import { Badge, Card } from "@/components/ui"
@@ -12,7 +13,7 @@ const nav: NavItem[] = [
 
 function Sidebar({ active, onChange }: { active: string; onChange: (value: string) => void }) {
   return <aside className="hidden w-[238px] shrink-0 border-r border-[var(--border)] bg-[#0e151d] p-4 md:flex md:flex-col">
-    <div className="flex items-center gap-3 px-2 py-3"><div className="flex size-9 items-center justify-center rounded-lg bg-[var(--primary)] text-white shadow-[0_0_24px_#3157d555]"><Zap className="size-5" /></div><div><p className="text-[13px] font-bold tracking-[0.18em] text-white">NEXUS</p><p className="text-[10px] tracking-[0.14em] text-[var(--muted-foreground)]">CORE OPS</p></div></div>
+    <div className="flex items-center gap-3 px-2 py-3"><div className="flex size-9 items-center justify-center rounded-lg bg-[var(--primary)] text-white shadow-[0_0_24px_#3157d555]"><Image src="/logo.png" alt="NEXUS CORE" width={36} height={36} className="rounded-lg" /></div><div><p className="text-[13px] font-bold tracking-[0.18em] text-white">NEXUS</p><p className="text-[10px] tracking-[0.14em] text-[var(--muted-foreground)]">CORE OPS</p></div></div>
     <div className="my-5 flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--muted)] px-3 py-2"><div className="size-2 rounded-full bg-[var(--success)]" /><span className="text-xs font-medium text-white">Production</span><ChevronDown className="ml-auto size-3.5 text-[var(--muted-foreground)]" /></div>
     <p className="px-2 pb-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted-foreground)]">Workspace</p>
     <nav className="flex flex-col gap-1">{nav.map(({ label, icon: Icon, count }) => <button key={label} onClick={() => onChange(label)} className={cn("flex items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm transition", active === label ? "bg-[#1c2a42] text-white" : "text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-white")}><Icon className="size-4" /><span>{label}</span>{count && <span className="ml-auto rounded bg-[var(--muted)] px-1.5 py-0.5 text-[10px]">{count}</span>}</button>)}</nav>
