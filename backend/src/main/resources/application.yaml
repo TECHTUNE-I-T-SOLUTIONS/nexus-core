@@ -73,3 +73,12 @@ nexus:
   scheduler:
     enabled: true
     polling-interval: 60s
+  webhook:
+    delivery:
+      enabled: true
+      polling-interval: 30s
+      batch-size: 10
+      max-retries: 3
+      connection-timeout-seconds: 10
+      response-timeout-seconds: 30
+      lease-duration-seconds: 300

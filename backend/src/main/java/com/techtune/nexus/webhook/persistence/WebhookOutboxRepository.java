@@ -16,5 +16,8 @@ public interface WebhookOutboxRepository extends JpaRepository<WebhookOutbox, UU
     @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveredAt IS NULL AND w.nextRetryAt <= :now ORDER BY w.nextRetryAt ASC")
     List<WebhookOutbox> findPendingWebhooks(@Param("now") Instant now);
 
+    @Query("SELECT w FROM WebhookOutbox w WHERE w.deliveredAt IS NULL AND w.nextRetryAt <= :now AND (w.leaseExpiresAt IS NULL OR w.leaseExpiresAt < :now) ORDER BY w.nextRetryAt ASC LIMIT :batchSize")
+    List<WebhookOutbox> findClaimableWebhooks(@Param("now") Instant now, @Param("batchSize") int batchSize);
+
     List<WebhookOutbox> findByJobId(UUID jobId);
 }

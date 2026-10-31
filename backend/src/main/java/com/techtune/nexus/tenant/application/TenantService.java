@@ -29,6 +29,11 @@ public class TenantService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<Tenant> findTenantById(UUID id) {
+        return tenantRepository.findById(id);
+    }
+
+    @Transactional(readOnly = true)
     public Tenant getTenant(UUID id) {
         return tenantRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + id));
