@@ -3,7 +3,8 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function middleware(request: NextRequest) {
-  const token = cookies().get("nexus_token")
+  const cookieStore = await cookies()
+  const token = cookieStore.get("nexus_token")
   
   // Allow public routes
   if (request.nextUrl.pathname === "/" || 
