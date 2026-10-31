@@ -1,8 +1,6 @@
 package com.techtune.nexus.worker.engine;
 
 import com.techtune.nexus.job.domain.Job;
-import com.techtune.nexus.job.persistence.JobRepository;
-import com.techtune.nexus.metrics.JobMetrics;
 import com.techtune.nexus.worker.config.WorkerProperties;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -10,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -28,8 +25,6 @@ public class Worker {
     private final WorkerProperties properties;
     private final JobClaimingService claimingService;
     private final JobExecutor executor;
-    private final JobRepository jobRepository;
-    private final JobMetrics metrics;
     private final ExecutorService executorService;
     private final ConcurrentHashMap<UUID, String> activeJobs = new ConcurrentHashMap<>();
 
@@ -37,14 +32,10 @@ public class Worker {
 
     public Worker(WorkerProperties properties,
                   JobClaimingService claimingService,
-                  JobExecutor executor,
-                  JobRepository jobRepository,
-                  JobMetrics metrics) {
+                  JobExecutor executor) {
         this.properties = properties;
         this.claimingService = claimingService;
         this.executor = executor;
-        this.jobRepository = jobRepository;
-        this.metrics = metrics;
         this.executorService = Executors.newFixedThreadPool(properties.getConcurrency());
     }
 
