@@ -1,3 +1,5 @@
-import Dashboard from "@/components/dashboard"
+import { LandingPage } from "@/components/public-site"
 
-export default function Page() { return <Dashboard /> }
+export default function Page() {
+  return <LandingPage />
+}
