@@ -79,6 +79,29 @@ public class WebhookEndpointService {
         return webhookEndpointRepository.findAll();
     }
 
+    @Transactional(readOnly = true)
+    public java.util.List<WebhookEndpoint> findEnabledEndpointsForEvent(UUID tenantId, String eventType) {
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null) {
+            tenantId = authenticatedTenantId;
+        }
+
+        if (tenantId == null) {
+            return java.util.List.of();
+        }
+
+        java.util.List<WebhookEndpoint> allEnabled = webhookEndpointRepository.findEnabledByTenantId(tenantId);
+        
+        // Filter by event type in application layer since eventTypes is stored as JSON
+        if (eventType == null) {
+            return allEnabled;
+        }
+        
+        return allEnabled.stream()
+                .filter(endpoint -> endpoint.getEventTypes().contains(eventType))
+                .toList();
+    }
+
     @Transactional
     public WebhookEndpoint updateWebhookEndpoint(UUID id, String url, String secret, Set<String> eventTypes, Boolean enabled) {
         WebhookEndpoint endpoint = webhookEndpointRepository.findById(id)
