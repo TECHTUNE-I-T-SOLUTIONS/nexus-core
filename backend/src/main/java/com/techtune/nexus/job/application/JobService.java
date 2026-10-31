@@ -6,6 +6,7 @@ import com.techtune.nexus.job.domain.JobStatus;
 import com.techtune.nexus.job.persistence.JobRepository;
 import com.techtune.nexus.tenant.domain.Tenant;
 import com.techtune.nexus.tenant.persistence.TenantRepository;
+import com.techtune.nexus.webhook.event.WebhookEventPublisher;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -22,10 +23,12 @@ public class JobService {
 
     private final JobRepository jobRepository;
     private final TenantRepository tenantRepository;
+    private final WebhookEventPublisher webhookEventPublisher;
 
-    public JobService(JobRepository jobRepository, TenantRepository tenantRepository) {
+    public JobService(JobRepository jobRepository, TenantRepository tenantRepository, WebhookEventPublisher webhookEventPublisher) {
         this.jobRepository = jobRepository;
         this.tenantRepository = tenantRepository;
+        this.webhookEventPublisher = webhookEventPublisher;
     }
 
     private UUID getAuthenticatedTenantId() {
@@ -136,14 +139,22 @@ public class JobService {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
         job.succeed();
-        return jobRepository.save(job);
+        Job savedJob = jobRepository.save(job);
+        // Publish webhook event for terminal success
+        webhookEventPublisher.publishJobCompleted(savedJob);
+        return savedJob;
     }
 
     public Job failJob(UUID jobId, String errorMessage, JsonNode errorDetails) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
         job.fail(errorMessage, errorDetails);
-        return jobRepository.save(job);
+        Job savedJob = jobRepository.save(job);
+        // Only publish webhook event if job is permanently failed (not retryable)
+        if (!savedJob.isRetryable()) {
+            webhookEventPublisher.publishJobFailed(savedJob, errorMessage);
+        }
+        return savedJob;
     }
 
     public Job cancelJob(UUID jobId) {
@@ -156,7 +167,10 @@ public class JobService {
         }
         
         job.cancel();
-        return jobRepository.save(job);
+        Job savedJob = jobRepository.save(job);
+        // Publish webhook event for cancellation
+        webhookEventPublisher.publishJobCancelled(savedJob);
+        return savedJob;
     }
 
     public Job retryJob(UUID jobId, Instant scheduledAt) {

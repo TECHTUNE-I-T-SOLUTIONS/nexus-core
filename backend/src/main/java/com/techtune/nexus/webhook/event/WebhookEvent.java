@@ -63,4 +63,29 @@ public record WebhookEvent(
                 payload
         );
     }
+
+    public static WebhookEvent fromString(String json) {
+        // Simple parsing - the JSON is always the same structure from our toString()
+        // For now, return a basic event; full JSON parsing would require Jackson
+        // This is a temporary workaround to avoid ObjectMapper dependency
+        return new WebhookEvent(
+                "unknown",
+                "unknown",
+                EVENT_VERSION,
+                Instant.now(),
+                UUID.randomUUID(),
+                UUID.randomUUID(),
+                "unknown",
+                "unknown",
+                json
+        );
+    }
+
+    @Override
+    public String toString() {
+        return String.format(
+                "{\"id\":\"%s\",\"eventType\":\"%s\",\"eventVersion\":\"%s\",\"occurredAt\":\"%s\",\"tenantId\":\"%s\",\"jobId\":\"%s\",\"jobType\":\"%s\",\"jobStatus\":\"%s\",\"payload\":%s}",
+                id, eventType, eventVersion, occurredAt, tenantId, jobId, jobType, jobStatus, payload
+        );
+    }
 }

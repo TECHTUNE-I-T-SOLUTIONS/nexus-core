@@ -35,17 +35,25 @@ public class WebhookDeliveryWorker {
         this.deliveryService = deliveryService;
     }
 
-    @Scheduled(fixedDelayString = "${nexus.webhook.polling-interval:30000}")
+    @Scheduled(fixedDelayString = "${nexus.webhook.delivery.polling-interval:30000}")
     @Transactional
     public void processPendingWebhooks() {
         Instant now = Instant.now();
-        List<WebhookOutbox> pendingWebhooks = webhookOutboxRepository.findClaimableWebhooks(now, BATCH_SIZE);
+        List<WebhookOutbox> pendingWebhooks = webhookOutboxRepository.findClaimableWebhooks(now);
 
         for (WebhookOutbox outbox : pendingWebhooks) {
             try {
-                // Claim the webhook with a lease
-                outbox.setLeaseExpiresAt(now.plusSeconds(LEASE_DURATION_SECONDS));
-                webhookOutboxRepository.save(outbox);
+                // Claim the webhook atomically
+                int claimed = webhookOutboxRepository.claimWebhook(
+                        outbox.getId(),
+                        now.plusSeconds(LEASE_DURATION_SECONDS),
+                        now
+                );
+                
+                if (claimed == 0) {
+                    // Another worker claimed it
+                    continue;
+                }
 
                 // Find the webhook endpoint
                 List<WebhookEndpoint> endpoints = webhookEndpointService.findEnabledEndpointsForEvent(

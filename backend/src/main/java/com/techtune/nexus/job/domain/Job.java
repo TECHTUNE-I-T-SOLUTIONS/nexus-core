@@ -301,6 +301,10 @@ public class Job extends UuidIdentity {
         this.completedAt = null;
     }
 
+    public boolean isRetryable() {
+        return status == JobStatus.RETRY_WAIT && attemptCount < maxAttempts;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

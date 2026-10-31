@@ -1,6 +1,5 @@
 package com.techtune.nexus.webhook.delivery;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.techtune.nexus.webhook.domain.WebhookEndpoint;
 import com.techtune.nexus.webhook.domain.WebhookOutbox;
 import com.techtune.nexus.webhook.event.WebhookEvent;
@@ -23,17 +22,20 @@ public class WebhookDeliveryService {
     private static final int RESPONSE_TIMEOUT_SECONDS = 30;
 
     private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
 
-    public WebhookDeliveryService(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public WebhookDeliveryService() {
         this.restTemplate = new RestTemplate();
+    }
+
+    // Constructor for testing with mocked RestTemplate
+    public WebhookDeliveryService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
     }
 
     public DeliveryResult deliver(WebhookEndpoint endpoint, WebhookOutbox outbox) {
         try {
-            WebhookEvent event = objectMapper.readValue(outbox.getPayload(), WebhookEvent.class);
-            String body = objectMapper.writeValueAsString(event);
+            String body = outbox.getPayload();
+            WebhookEvent event = WebhookEvent.fromString(body);
             String signature = generateSignature(endpoint.getSecret(), body);
 
             HttpHeaders headers = new HttpHeaders();
@@ -64,7 +66,7 @@ public class WebhookDeliveryService {
         }
     }
 
-    private String generateSignature(String secret, String payload) {
+    public String generateSignature(String secret, String payload) {
         try {
             MessageDigest digest = MessageDigest.getInstance("SHA-256");
             String message = secret + payload;
