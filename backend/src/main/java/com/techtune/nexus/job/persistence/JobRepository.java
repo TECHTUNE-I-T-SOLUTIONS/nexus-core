@@ -38,6 +38,9 @@ public interface JobRepository extends JpaRepository<Job, UUID> {
     @Query("SELECT j FROM Job j WHERE j.status = :status AND j.leaseExpiresAt < :now")
     List<Job> findExpiredLeases(@Param("status") JobStatus status, @Param("now") Instant now);
 
+    @Query("SELECT j FROM Job j WHERE j.scheduleId = :scheduleId")
+    List<Job> findByScheduleId(@Param("scheduleId") UUID scheduleId);
+
     @Modifying
     @Query(value = """
         UPDATE jobs 

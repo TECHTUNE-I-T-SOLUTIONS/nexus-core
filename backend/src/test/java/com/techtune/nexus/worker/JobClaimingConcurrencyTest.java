@@ -79,7 +79,7 @@ class JobClaimingConcurrencyTest {
         int jobCount = 10;
         ObjectNode payload = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
         for (int i = 0; i < jobCount; i++) {
-            jobService.createJob(tenant.getId(), "test-job", payload, 5, null, 3, 60, null);
+            jobService.createJob(tenant.getId(), "test-job", payload, 5, null, 3, 60, null, null);
         }
 
         // Wait for jobs to be queued
@@ -132,7 +132,7 @@ class JobClaimingConcurrencyTest {
         int jobCount = 20;
         ObjectNode payload = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
         for (int i = 0; i < jobCount; i++) {
-            jobService.createJob(tenant.getId(), "test-job", payload, 5, null, 3, 60, null);
+            jobService.createJob(tenant.getId(), "test-job", payload, 5, null, 3, 60, null, null);
         }
 
         // Wait for jobs to be queued
@@ -160,12 +160,12 @@ class JobClaimingConcurrencyTest {
         // Create jobs for tenant 1
         ObjectNode payload = com.fasterxml.jackson.databind.node.JsonNodeFactory.instance.objectNode();
         for (int i = 0; i < 5; i++) {
-            jobService.createJob(tenant1.getId(), "test-job", payload, 5, null, 3, 60, null);
+            jobService.createJob(tenant1.getId(), "test-job", payload, 5, null, 3, 60, null, null);
         }
 
         // Create jobs for tenant 2
         for (int i = 0; i < 5; i++) {
-            jobService.createJob(tenant2.getId(), "test-job", payload, 5, null, 3, 60, null);
+            jobService.createJob(tenant2.getId(), "test-job", payload, 5, null, 3, 60, null, null);
         }
 
         // Wait for jobs to be queued

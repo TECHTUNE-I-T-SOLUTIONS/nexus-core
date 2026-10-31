@@ -22,3 +22,11 @@ CREATE TABLE schedules (
 CREATE INDEX idx_schedules_tenant ON schedules(tenant_id);
 CREATE INDEX idx_schedules_enabled_next ON schedules(is_enabled, next_execution_at) WHERE is_enabled = TRUE;
 CREATE INDEX idx_schedules_next_execution ON schedules(next_execution_at) WHERE is_enabled = TRUE;
+
+-- Add schedule_id to jobs table for tracking which schedule generated the job
+-- This enables schedule-level duplicate prevention
+ALTER TABLE jobs ADD COLUMN schedule_id UUID REFERENCES schedules(id) ON DELETE SET NULL;
+
+-- Add unique constraint to prevent duplicate job generation for same schedule at same time
+-- This ensures that multiple scheduler instances cannot generate duplicate jobs
+CREATE UNIQUE INDEX uq_jobs_schedule_time ON jobs(schedule_id, scheduled_at) WHERE schedule_id IS NOT NULL;
