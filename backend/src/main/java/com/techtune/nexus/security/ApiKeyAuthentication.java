@@ -12,17 +12,17 @@ import java.util.stream.Collectors;
 public class ApiKeyAuthentication implements Authentication {
 
     private final UUID tenantId;
-    private final String apiKey;
+    private final UUID publicKeyId; // Store only public key ID, not the full secret
     private final Set<String> scopes;
     private boolean authenticated;
 
-    public ApiKeyAuthentication(UUID tenantId, String apiKey) {
-        this(tenantId, apiKey, Collections.emptySet());
+    public ApiKeyAuthentication(UUID tenantId, UUID publicKeyId) {
+        this(tenantId, publicKeyId, Collections.emptySet());
     }
 
-    public ApiKeyAuthentication(UUID tenantId, String apiKey, Set<String> scopes) {
+    public ApiKeyAuthentication(UUID tenantId, UUID publicKeyId, Set<String> scopes) {
         this.tenantId = tenantId;
-        this.apiKey = apiKey;
+        this.publicKeyId = publicKeyId;
         this.scopes = scopes;
         this.authenticated = false;
     }
@@ -36,7 +36,8 @@ public class ApiKeyAuthentication implements Authentication {
 
     @Override
     public Object getCredentials() {
-        return apiKey;
+        // Return only the public key ID, not the secret
+        return publicKeyId;
     }
 
     @Override
@@ -66,6 +67,10 @@ public class ApiKeyAuthentication implements Authentication {
 
     public UUID getTenantId() {
         return tenantId;
+    }
+
+    public UUID getPublicKeyId() {
+        return publicKeyId;
     }
 
     public Set<String> getScopes() {

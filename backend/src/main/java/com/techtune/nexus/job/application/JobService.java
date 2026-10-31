@@ -6,6 +6,8 @@ import com.techtune.nexus.job.domain.JobStatus;
 import com.techtune.nexus.job.persistence.JobRepository;
 import com.techtune.nexus.tenant.domain.Tenant;
 import com.techtune.nexus.tenant.persistence.TenantRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +28,23 @@ public class JobService {
         this.tenantRepository = tenantRepository;
     }
 
+    private UUID getAuthenticatedTenantId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated()) {
+            Object principal = auth.getPrincipal();
+            if (principal instanceof UUID) {
+                return (UUID) principal;
+            }
+        }
+        return null;
+    }
+
     public Job createJob(UUID tenantId, String jobType, JsonNode payload, Integer priority, Instant scheduledAt, Integer maxAttempts, Integer timeoutSeconds, String idempotencyKey) {
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(tenantId)) {
+            throw new IllegalArgumentException("Cannot create jobs for other tenants");
+        }
+        
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
         Job job = new Job(tenant, jobType, payload);
@@ -51,12 +69,24 @@ public class JobService {
 
     @Transactional(readOnly = true)
     public Job getJob(UUID id) {
-        return jobRepository.findById(id)
+        Job job = jobRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + id));
+        
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(job.getTenantId())) {
+            throw new IllegalArgumentException("Cannot access jobs from other tenants");
+        }
+        
+        return job;
     }
 
     @Transactional(readOnly = true)
     public List<Job> listJobs(UUID tenantId, String status) {
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null) {
+            tenantId = authenticatedTenantId;
+        }
+        
         if (tenantId != null && status != null) {
             return jobRepository.findByTenantIdAndStatus(tenantId, JobStatus.valueOf(status));
         } else if (tenantId != null) {
@@ -116,6 +146,12 @@ public class JobService {
     public Job cancelJob(UUID jobId) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
+        
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(job.getTenantId())) {
+            throw new IllegalArgumentException("Cannot cancel jobs from other tenants");
+        }
+        
         job.cancel();
         return jobRepository.save(job);
     }
@@ -123,6 +159,12 @@ public class JobService {
     public Job retryJob(UUID jobId, Instant scheduledAt) {
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
+
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(job.getTenantId())) {
+            throw new IllegalArgumentException("Cannot retry jobs from other tenants");
+        }
+
         job.scheduleRetry(scheduledAt);
         job.retry();
         return jobRepository.save(job);

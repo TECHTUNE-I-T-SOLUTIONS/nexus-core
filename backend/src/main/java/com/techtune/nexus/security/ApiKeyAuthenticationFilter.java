@@ -44,7 +44,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
                 if (validationResult.valid()) {
                     ApiKeyAuthentication authentication = new ApiKeyAuthentication(
                             validationResult.tenantId(), 
-                            apiKey,
+                            publicKeyId, // Store only public key ID, not the secret
                             validationResult.scopes()
                     );
                     authentication.setAuthenticated(true);
