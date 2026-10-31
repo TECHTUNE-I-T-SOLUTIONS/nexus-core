@@ -2,9 +2,11 @@
 
 import Image from "next/image"
 import { useMemo, useState } from "react"
-import { Activity, AlertTriangle, BarChart3, Bell, CheckCircle2, ChevronDown, CircleHelp, Clock3, Code2, ExternalLink, FileText, Gauge, Layers3, ListChecks, MoreHorizontal, Package, Play, Plus, Search, Server, Settings2, ShieldCheck, Terminal, Webhook, XCircle, Zap } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { Activity, AlertTriangle, BarChart3, Bell, CheckCircle2, ChevronDown, CircleHelp, Clock3, Code2, ExternalLink, FileText, Gauge, Layers3, ListChecks, MoreHorizontal, Package, Play, Plus, Search, Server, Settings2, ShieldCheck, Terminal, Webhook, XCircle, Zap, LogOut } from "lucide-react"
 import { Badge, Card } from "@/components/ui"
 import { cn } from "@/lib/utils"
+import { logoutUser } from "@/app/actions/auth"
 
 type NavItem = { label: string; icon: typeof Activity; count?: string }
 const nav: NavItem[] = [
@@ -23,7 +25,15 @@ function Sidebar({ active, onChange }: { active: string; onChange: (value: strin
   </aside>
 }
 
-function Topbar({ title }: { title: string }) { return <header className="flex h-[72px] items-center justify-between border-b border-[var(--border)] px-5 md:px-8"><div><p className="text-[11px] uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Operations workspace</p><h1 className="mt-1 text-xl font-semibold tracking-tight text-white">{title}</h1></div><div className="flex items-center gap-2"><button className="hidden items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--muted-foreground)] hover:text-white sm:flex"><Search className="size-3.5" /> Search <kbd className="rounded bg-[var(--muted)] px-1.5 py-0.5 text-[10px]">⌘ K</kbd></button><button className="relative rounded-lg border border-[var(--border)] p-2 text-[var(--muted-foreground)] hover:text-white"><Bell className="size-4" /><span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[var(--danger)]" /></button><button className="flex size-8 items-center justify-center rounded-full bg-[#2a3f65] text-xs font-semibold text-white">TC</button></div></header> }
+function Topbar({ title }: { title: string }) { 
+  const router = useRouter()
+  
+  const handleLogout = async () => {
+    await logoutUser()
+    router.push("/login")
+  }
+  
+  return <header className="flex h-[72px] items-center justify-between border-b border-[var(--border)] px-5 md:px-8"><div><p className="text-[11px] uppercase tracking-[0.18em] text-[var(--muted-foreground)]">Operations workspace</p><h1 className="mt-1 text-xl font-semibold tracking-tight text-white">{title}</h1></div><div className="flex items-center gap-2"><button className="hidden items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--muted-foreground)] hover:text-white sm:flex"><Search className="size-3.5" /> Search <kbd className="rounded bg-[var(--muted)] px-1.5 py-0.5 text-[10px]">⌘ K</kbd></button><button className="relative rounded-lg border border-[var(--border)] p-2 text-[var(--muted-foreground)] hover:text-white"><Bell className="size-4" /><span className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-[var(--danger)]" /></button><button onClick={handleLogout} className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--muted-foreground)] hover:text-white"><LogOut className="size-3.5" /> Logout</button></div></header> }
 
 const statusTone = (status: string) => status === "SUCCEEDED" ? "success" : status === "RUNNING" ? "info" : status === "FAILED" ? "danger" : status === "RETRY_WAIT" ? "warning" : "neutral"
 function Metric({ label, value, delta, icon: Icon, tone }: { label: string; value: string; delta: string; icon: typeof Activity; tone: "success" | "warning" | "danger" | "info" }) { return <Card className="p-4"><div className="flex items-start justify-between"><div><p className="text-xs text-[var(--muted-foreground)]">{label}</p><p className="mt-2 text-2xl font-semibold tracking-tight text-white">{value}</p><p className={cn("mt-2 text-[11px] font-medium", tone === "success" ? "text-[var(--success)]" : tone === "danger" ? "text-[var(--danger)]" : "text-[var(--warning)]")}>{delta}</p></div><div className={cn("rounded-lg p-2", tone === "success" ? "bg-[var(--success)]/10 text-[var(--success)]" : tone === "danger" ? "bg-[var(--danger)]/10 text-[var(--danger)]" : tone === "info" ? "bg-[var(--primary)]/10 text-[var(--primary)]" : "bg-[var(--warning)]/10 text-[var(--warning)]")}><Icon className="size-4" /></div></div></Card> }
