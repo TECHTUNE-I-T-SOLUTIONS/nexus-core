@@ -70,3 +70,6 @@ nexus:
     concurrency: 5
     lease-duration-seconds: 60
     worker-id: ${WORKER_ID:}
+  scheduler:
+    enabled: true
+    polling-interval: 60s
