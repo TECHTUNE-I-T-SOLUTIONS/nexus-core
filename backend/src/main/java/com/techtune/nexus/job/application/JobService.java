@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.techtune.nexus.job.domain.Job;
 import com.techtune.nexus.job.domain.JobStatus;
 import com.techtune.nexus.job.persistence.JobRepository;
+import com.techtune.nexus.metrics.JobMetrics;
 import com.techtune.nexus.tenant.domain.Tenant;
 import com.techtune.nexus.tenant.persistence.TenantRepository;
 import com.techtune.nexus.webhook.event.WebhookEventPublisher;
@@ -24,11 +25,13 @@ public class JobService {
     private final JobRepository jobRepository;
     private final TenantRepository tenantRepository;
     private final WebhookEventPublisher webhookEventPublisher;
+    private final JobMetrics jobMetrics;
 
-    public JobService(JobRepository jobRepository, TenantRepository tenantRepository, WebhookEventPublisher webhookEventPublisher) {
+    public JobService(JobRepository jobRepository, TenantRepository tenantRepository, WebhookEventPublisher webhookEventPublisher, JobMetrics jobMetrics) {
         this.jobRepository = jobRepository;
         this.tenantRepository = tenantRepository;
         this.webhookEventPublisher = webhookEventPublisher;
+        this.jobMetrics = jobMetrics;
     }
 
     private UUID getAuthenticatedTenantId() {
@@ -47,6 +50,8 @@ public class JobService {
         if (authenticatedTenantId != null && !authenticatedTenantId.equals(tenantId)) {
             throw new IllegalArgumentException("Cannot create jobs for other tenants");
         }
+        
+        jobMetrics.recordSubmitted();
         
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new IllegalArgumentException("Tenant not found: " + tenantId));
@@ -140,6 +145,7 @@ public class JobService {
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
         job.succeed();
         Job savedJob = jobRepository.save(job);
+        jobMetrics.recordCompleted();
         // Publish webhook event for terminal success
         webhookEventPublisher.publishJobCompleted(savedJob);
         return savedJob;
@@ -150,8 +156,8 @@ public class JobService {
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
         job.fail(errorMessage, errorDetails);
         Job savedJob = jobRepository.save(job);
-        // Only publish webhook event if job is permanently failed (not retryable)
         if (!savedJob.isRetryable()) {
+            jobMetrics.recordFailed();
             webhookEventPublisher.publishJobFailed(savedJob, errorMessage);
         }
         return savedJob;
@@ -168,6 +174,7 @@ public class JobService {
         
         job.cancel();
         Job savedJob = jobRepository.save(job);
+        jobMetrics.recordCancelled();
         // Publish webhook event for cancellation
         webhookEventPublisher.publishJobCancelled(savedJob);
         return savedJob;

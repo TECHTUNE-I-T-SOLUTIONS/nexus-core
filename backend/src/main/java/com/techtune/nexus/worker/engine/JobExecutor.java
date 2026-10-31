@@ -20,20 +20,21 @@ public class JobExecutor {
     private final JobRepository jobRepository;
     private final JobExecutionAttemptRepository attemptRepository;
     private final JobHandlerRegistry handlerRegistry;
-    private final JobMetrics metrics;
+    private final JobMetrics jobMetrics;
 
     public JobExecutor(JobRepository jobRepository, 
                       JobExecutionAttemptRepository attemptRepository,
                       JobHandlerRegistry handlerRegistry, 
-                      JobMetrics metrics) {
+                      JobMetrics jobMetrics) {
         this.jobRepository = jobRepository;
         this.attemptRepository = attemptRepository;
         this.handlerRegistry = handlerRegistry;
-        this.metrics = metrics;
+        this.jobMetrics = jobMetrics;
     }
 
     @Transactional
     public void executeJob(UUID jobId, String workerId) {
+        Instant startTime = Instant.now();
         Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found"));
 
@@ -70,12 +71,11 @@ public class JobExecutor {
             attempt.completeFailure("Unknown job type: " + job.getJobType(), null);
             attemptRepository.save(attempt);
             jobRepository.save(job);
-            metrics.incrementJobsFailed();
+            jobMetrics.recordFailed();
             return;
         }
 
         // Execute handler with metrics
-        var timerSample = metrics.startJobExecution();
         try {
             handler.handle(job);
             
@@ -84,8 +84,8 @@ public class JobExecutor {
             attempt.completeSuccess();
             attemptRepository.save(attempt);
             jobRepository.save(job);
-            metrics.incrementJobsCompleted();
-            metrics.recordJobExecution(timerSample);
+            jobMetrics.recordCompleted();
+            jobMetrics.recordExecutionDuration(java.time.Duration.between(startTime, Instant.now()).toMillis());
             
         } catch (Exception e) {
             // Failure transition
@@ -93,8 +93,8 @@ public class JobExecutor {
             attempt.completeFailure(e.getMessage(), null);
             attemptRepository.save(attempt);
             jobRepository.save(job);
-            metrics.incrementJobsFailed();
-            metrics.recordJobExecution(timerSample);
+            jobMetrics.recordFailed();
+            jobMetrics.recordExecutionDuration(java.time.Duration.between(startTime, Instant.now()).toMillis());
             
             // Schedule retry if attempts remain
             if (job.getAttemptCount() < job.getMaxAttempts()) {
@@ -102,7 +102,7 @@ public class JobExecutor {
                 job.scheduleRetry(retryAt);
                 job.retry();
                 jobRepository.save(job);
-                metrics.incrementJobsRetried();
+                jobMetrics.recordRetried();
             }
         }
     }
