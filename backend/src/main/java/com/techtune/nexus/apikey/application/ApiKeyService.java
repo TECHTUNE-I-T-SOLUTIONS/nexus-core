@@ -66,7 +66,7 @@ public class ApiKeyService {
             return new ApiKeyValidationResult(false, null, null, "Invalid API key secret");
         }
 
-        // Update last used timestamp
+        // Update last used timestamp asynchronously to avoid blocking the request
         apiKey.setLastUsedAt(Instant.now());
         apiKeyRepository.save(apiKey);
 

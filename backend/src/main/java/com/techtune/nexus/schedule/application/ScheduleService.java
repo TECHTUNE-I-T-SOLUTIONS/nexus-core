@@ -7,6 +7,8 @@ import com.techtune.nexus.schedule.domain.Schedule;
 import com.techtune.nexus.schedule.persistence.ScheduleRepository;
 import com.techtune.nexus.tenant.domain.Tenant;
 import com.techtune.nexus.tenant.persistence.TenantRepository;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +29,23 @@ public class ScheduleService {
         this.tenantRepository = tenantRepository;
     }
 
+    private UUID getAuthenticatedTenantId() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated()) {
+            Object principal = auth.getPrincipal();
+            if (principal instanceof UUID) {
+                return (UUID) principal;
+            }
+        }
+        return null;
+    }
+
     public Schedule createSchedule(CreateScheduleRequest request) {
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(request.tenantId())) {
+            throw new IllegalArgumentException("Cannot create schedules for other tenants");
+        }
+        
         // Validate cron expression
         CronEvaluator.validate(request.cronExpression());
         
@@ -63,11 +81,26 @@ public class ScheduleService {
 
     @Transactional(readOnly = true)
     public Optional<Schedule> getSchedule(UUID id) {
-        return scheduleRepository.findById(id);
+        Schedule schedule = scheduleRepository.findById(id)
+                .orElse(null);
+        
+        if (schedule != null) {
+            UUID authenticatedTenantId = getAuthenticatedTenantId();
+            if (authenticatedTenantId != null && !authenticatedTenantId.equals(schedule.getTenantId())) {
+                throw new IllegalArgumentException("Cannot access schedules from other tenants");
+            }
+        }
+        
+        return Optional.ofNullable(schedule);
     }
 
     @Transactional(readOnly = true)
     public List<Schedule> listSchedules(UUID tenantId) {
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null) {
+            tenantId = authenticatedTenantId;
+        }
+        
         if (tenantId != null) {
             return scheduleRepository.findByTenantId(tenantId);
         }
@@ -77,6 +110,11 @@ public class ScheduleService {
     public Schedule updateSchedule(UUID id, CreateScheduleRequest request) {
         Schedule schedule = scheduleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found: " + id));
+        
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(schedule.getTenantId())) {
+            throw new IllegalArgumentException("Cannot modify schedules from other tenants");
+        }
 
         // Validate cron expression if changed
         if (!schedule.getCronExpression().equals(request.cronExpression())) {
@@ -118,6 +156,12 @@ public class ScheduleService {
     public Schedule pauseSchedule(UUID id) {
         Schedule schedule = scheduleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found: " + id));
+        
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(schedule.getTenantId())) {
+            throw new IllegalArgumentException("Cannot modify schedules from other tenants");
+        }
+        
         schedule.setEnabled(false);
         return scheduleRepository.save(schedule);
     }
@@ -125,6 +169,12 @@ public class ScheduleService {
     public Schedule resumeSchedule(UUID id) {
         Schedule schedule = scheduleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found: " + id));
+        
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(schedule.getTenantId())) {
+            throw new IllegalArgumentException("Cannot modify schedules from other tenants");
+        }
+        
         schedule.setEnabled(true);
         
         // Recalculate next execution time
@@ -138,6 +188,12 @@ public class ScheduleService {
     public void deleteSchedule(UUID id) {
         Schedule schedule = scheduleRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Schedule not found: " + id));
+        
+        UUID authenticatedTenantId = getAuthenticatedTenantId();
+        if (authenticatedTenantId != null && !authenticatedTenantId.equals(schedule.getTenantId())) {
+            throw new IllegalArgumentException("Cannot delete schedules from other tenants");
+        }
+        
         scheduleRepository.delete(schedule);
     }
 
