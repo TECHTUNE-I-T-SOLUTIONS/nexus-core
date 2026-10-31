@@ -23,15 +23,12 @@ API key authentication and authorization implementation for NEXUS CORE Phase 3.
 - **Finding**: Proper validation in place
 - **Recommendation**: Current implementation is appropriate
 
-### 3. Plaintext API Key in Security Context ⚠️
-- **Status**: SECURITY ISSUE
-- **Finding**: `ApiKeyAuthentication` stores the full plaintext API key in the `credentials` field
-- **Risk**: 
-  - API key could be logged via Spring Security logging
-  - API key could be exposed in error messages
-  - API key persists in memory for the duration of the request
-- **Recommendation**: Store only the public key ID in the authentication object, not the full secret
-- **Priority**: MEDIUM
+### 3. Plaintext API Key in Security Context ✅
+- **Status**: FIXED (Phase 3.1 + Security Hardening)
+- **Implementation**: `ApiKeyAuthentication` stores only the public key ID in the `credentials` field
+- **Finding**: Previously stored full plaintext API key - now removed
+- **Recommendation**: Current implementation is appropriate
+- **Priority**: RESOLVED
 
 ### 4. Last-Used Tracking Performance ⚠️
 - **Status**: PERFORMANCE ISSUE
@@ -51,18 +48,24 @@ API key authentication and authorization implementation for NEXUS CORE Phase 3.
 - **Recommendation**: This is acceptable for development but should be secured in production configuration
 - **Priority**: LOW (document in deployment guide)
 
-### 6. Scope Authorities ⚠️
-- **Status**: PARTIALLY IMPLEMENTED
-- **Finding**: Scopes are converted to `SCOPE_` prefixed authorities but no endpoint-level enforcement is implemented
-- **Risk**: 
-  - Scopes are stored and returned but not actually enforced
-  - Any authenticated API key can access any endpoint
-- **Recommendation**: Implement method-level or endpoint-level security annotations to enforce scopes
-- **Priority**: MEDIUM (document limitation for Phase 3)
+### 6. Scope Authorities ✅
+- **Status**: FIXED (Phase 3.1 + Security Hardening)
+- **Implementation**: 
+  - Scopes are converted to `SCOPE_` prefixed authorities
+  - Endpoint-level enforcement implemented with `@PreAuthorize` annotations
+  - Job endpoints enforce `jobs:read`, `jobs:write`, `jobs:cancel`, `jobs:retry`
+  - Schedule endpoints enforce `schedules:read`, `schedules:write`
+- **Finding**: Scopes are now enforced at the server level
+- **Recommendation**: Current implementation is appropriate
+- **Priority**: RESOLVED
 
 ### 7. Tenant Isolation ✅
-- **Status**: SECURE
-- **Finding**: Tenant ID is derived from validated API key, not from request input
+- **Status**: SECURE (Security Hardening)
+- **Implementation**: 
+  - Tenant ID is derived from validated API key, not from request input
+  - Service-layer tenant isolation added to JobService and ScheduleService
+  - Request-supplied tenant IDs are rejected when authenticated tenant differs
+- **Finding**: Strong tenant isolation at both authentication and service layers
 - **Recommendation**: Current implementation is appropriate
 
 ### 8. Error Messages ✅
@@ -77,19 +80,21 @@ API key authentication and authorization implementation for NEXUS CORE Phase 3.
 
 ## Remaining Security Work for Production
 
-1. **Remove plaintext API key from authentication context** - Store only public key ID
-2. **Implement scope enforcement** - Add `@PreAuthorize` annotations to endpoints
-3. **Optimize last_used_at updates** - Consider async or batched updates
+1. ~~**Remove plaintext API key from authentication context**~~ - FIXED in security hardening
+2. ~~**Implement scope enforcement**~~ - FIXED in security hardening
+3. **Optimize last_used_at updates** - Consider async or batched updates (comment added for future optimization)
 4. **Secure actuator endpoints** - Add authentication for production
 5. **Add rate limiting** - Per-API-key rate limiting to prevent abuse
 6. **Add audit logging** - Log API key usage without exposing secrets
+7. **Scheduler duplicate prevention** - Schedule-level deduplication requires database constraint for production multi-instance deployment
 
 ## Phase 3 Security Status
 
-**Overall**: Acceptable for Phase 3 with documented limitations
+**Overall**: Improved with security hardening (Phase 3.1 + additional pass)
 
 **Critical Issues**: None
-**Medium Issues**: 2 (plaintext key in context, scope enforcement)
+**Medium Issues**: 0 (previously 2 - both resolved)
 **Low Issues**: 2 (last_used_at performance, actuator security)
+**Production Recommendations**: 5 remaining items
 
-The current implementation provides a solid foundation for API key authentication. The identified issues are not blockers for Phase 3 but should be addressed before production deployment.
+The current implementation provides a solid foundation for API key authentication. The two medium-priority issues (plaintext key in context and scope enforcement) have been resolved. Schedule-level duplicate prevention remains a concern for multi-instance deployment.
