@@ -1,0 +1,6 @@
+import { ReactNode } from "react"
+import { cn } from "@/lib/utils"
+
+export function Card({ children, className }: { children: ReactNode; className?: string }) { return <section className={cn("rounded-xl border bg-[var(--card)] text-[var(--card-foreground)] shadow-[0_16px_40px_#0000000a]", className)}>{children}</section> }
+export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: "neutral" | "success" | "warning" | "danger" | "info" }) { return <span className={cn("inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold tracking-wide", tone === "success" && "border-[var(--success)]/30 bg-[var(--success)]/10 text-[var(--success)]", tone === "warning" && "border-[var(--warning)]/30 bg-[var(--warning)]/10 text-[var(--warning)]", tone === "danger" && "border-[var(--danger)]/30 bg-[var(--danger)]/10 text-[var(--danger)]", tone === "info" && "border-[var(--primary)]/30 bg-[var(--primary)]/10 text-[var(--primary)]", tone === "neutral" && "border-[var(--border)] bg-[var(--muted)] text-[var(--muted-foreground)]")}>{children}</span> }
+export function Skeleton({ className }: { className?: string }) { return <div className={cn("animate-pulse rounded-md bg-[var(--muted)]", className)} /> }
