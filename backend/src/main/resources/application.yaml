@@ -2,10 +2,10 @@ spring:
   application:
     name: nexus-core
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/nexus_core}
-    username: ${DATABASE_USERNAME:nexus}
-    password: ${DATABASE_PASSWORD:nexus_password}
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:h2:mem:nexus_core;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    username: sa
+    password: 
+    driver-class-name: org.h2.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 2
@@ -14,17 +14,17 @@ spring:
       max-lifetime: 1800000
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
         use_sql_comments: true
         jdbc:
           time_zone: UTC
   flyway:
-    enabled: true
+    enabled: false
     locations: classpath:db/migration
     baseline-on-migrate: true
     validate-on-migrate: true
@@ -64,18 +64,18 @@ logging:
 
 nexus:
   worker:
-    enabled: ${WORKER_ENABLED:true}
+    enabled: false
     polling-interval: 5s
     batch-size: 10
     concurrency: 5
     lease-duration-seconds: 60
     worker-id: ${WORKER_ID:}
   scheduler:
-    enabled: true
+    enabled: false
     polling-interval: 60s
   webhook:
     delivery:
-      enabled: true
+      enabled: false
       polling-interval: 30s
       batch-size: 10
       max-retries: 3

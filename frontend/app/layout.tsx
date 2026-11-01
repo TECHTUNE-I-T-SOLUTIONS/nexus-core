@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import "./globals.css"
+import { Toaster } from "react-hot-toast"
 
 export const metadata: Metadata = { 
   title: "NEXUS CORE | Operations", 
@@ -9,4 +10,13 @@ export const metadata: Metadata = {
   }
 }
 
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { return <html lang="en" className="dark"><body>{children}</body></html> }
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) { 
+  return (
+    <html lang="en" className="dark">
+      <body>
+        {children}
+        <Toaster position="top-right" />
+      </body>
+    </html>
+  )
+}
