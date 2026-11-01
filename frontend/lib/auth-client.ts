@@ -1,3 +1,5 @@
+import "server-only";
+
 const API_URL = process.env.NEXUS_API_URL || "http://localhost:8080";
 
 export interface RegisterRequest {
