@@ -77,4 +77,64 @@ function Jobs() {
 
   return <div className="flex flex-col gap-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm text-[var(--muted-foreground)]">Manage and inspect background work.</p></div><button className="flex items-center gap-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-white"><Plus className="size-4" /> Submit job</button></div><Card className="overflow-hidden"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border)] p-4"><div className="flex items-center gap-2"><div className="flex items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs text-[var(--muted-foreground)]"><Search className="size-3.5" /> Filter jobs</div><select value={filter} onChange={(event) => setFilter(event.target.value)} className="rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-xs text-[var(--muted-foreground)]"><option>All statuses</option><option>QUEUED</option><option>RUNNING</option><option>SUCCEEDED</option><option>FAILED</option></select></div><span className="text-xs text-[var(--muted-foreground)]">{filteredJobs.length} jobs</span></div>{filteredJobs.length === 0 ? <div className="flex min-h-[320px] flex-col items-center justify-center px-5 text-center"><ListChecks className="mb-3 size-8 text-[var(--muted-foreground)]/50" /><p className="text-sm font-medium text-[var(--muted-foreground)]">No jobs found</p></div> : <div className="divide-y divide-[var(--border)]">{filteredJobs.map((job) => <div key={job.id} className="flex items-center justify-between p-4 text-sm"><div><div className="flex items-center gap-2"><Badge tone={statusTone(job.status)}>{job.status}</Badge><span className="font-medium text-white">{job.jobType}</span></div><p className="mt-1 text-xs text-[var(--muted-foreground)]">ID: {job.id.slice(0, 8)}...</p></div><p className="text-xs text-[var(--muted-foreground)]">{new Date(job.createdAt).toLocaleString()}</p></div>)}</div></Card></div> }
 
-export default function Dashboard() { const [active, setActive] = useState("Overview"); const title = active === "Overview" ? "Overview" : active; return <main className="flex min-h-screen bg-[var(--background)]"><Sidebar active={active} onChange={setActive} /><div className="min-w-0 flex-1"><Topbar title={title} /><div className="p-5 md:p-8">{active === "Overview" ? <Overview /> : active === "Jobs" ? <Jobs /> : <Card className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center"><Code2 className="mb-4 size-9 text-[var(--primary)]" /><h2 className="text-lg font-semibold text-white">{active} is ready for API wiring</h2><p className="mt-2 max-w-md text-sm leading-6 text-[var(--muted-foreground)]">The navigation and operations shell are in place. This surface will use the corresponding Spring Boot controller once the authenticated dashboard proxy is configured.</p></Card>}</div></div></main> }
+function Schedules() { 
+  const [schedules, setSchedules] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  
+  useEffect(() => {
+    async function loadSchedules() {
+      try {
+        const token = document.cookie.split('nexus_token=')[1]?.split(';')[0];
+        if (!token) {
+          setError("Not authenticated");
+          setLoading(false);
+          return;
+        }
+        const data = await fetchSchedules(token);
+        setSchedules(data);
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+    loadSchedules();
+  }, []);
+
+  if (loading) return <div className="flex min-h-[320px] items-center justify-center"><p className="text-sm text-[var(--muted-foreground)]">Loading schedules...</p></div>;
+  if (error) return <div className="flex min-h-[320px] items-center justify-center"><p className="text-sm text-[var(--danger)]">{error}</p></div>;
+
+  return <div className="flex flex-col gap-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm text-[var(--muted-foreground)]">Manage recurring job schedules.</p></div><button className="flex items-center gap-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-white"><Plus className="size-4" /> Create schedule</button></div><Card className="overflow-hidden"><div className="flex items-center justify-between border-b border-[var(--border)] p-4"><span className="text-xs text-[var(--muted-foreground)]">{schedules.length} schedules</span></div>{schedules.length === 0 ? <div className="flex min-h-[320px] flex-col items-center justify-center px-5 text-center"><Clock3 className="mb-3 size-8 text-[var(--muted-foreground)]/50" /><p className="text-sm font-medium text-[var(--muted-foreground)]">No schedules found</p></div> : <div className="divide-y divide-[var(--border)]">{schedules.map((schedule) => <div key={schedule.id} className="flex items-center justify-between p-4 text-sm"><div><div className="flex items-center gap-2"><Badge tone={schedule.enabled ? "success" : "neutral"}>{schedule.enabled ? "Enabled" : "Disabled"}</Badge><span className="font-medium text-white">{schedule.jobType}</span></div><p className="mt-1 text-xs text-[var(--muted-foreground)]">Cron: {schedule.cronExpression}</p></div><p className="text-xs text-[var(--muted-foreground)]">{new Date(schedule.createdAt).toLocaleString()}</p></div>)}</div></Card></div> }
+
+function Webhooks() { 
+  const [webhooks, setWebhooks] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  
+  useEffect(() => {
+    async function loadWebhooks() {
+      try {
+        const token = document.cookie.split('nexus_token=')[1]?.split(';')[0];
+        if (!token) {
+          setError("Not authenticated");
+          setLoading(false);
+          return;
+        }
+        const data = await fetchWebhooks(token);
+        setWebhooks(data);
+        setLoading(false);
+      } catch (err: any) {
+        setError(err.message);
+        setLoading(false);
+      }
+    }
+    loadWebhooks();
+  }, []);
+
+  if (loading) return <div className="flex min-h-[320px] items-center justify-center"><p className="text-sm text-[var(--muted-foreground)]">Loading webhooks...</p></div>;
+  if (error) return <div className="flex min-h-[320px] items-center justify-center"><p className="text-sm text-[var(--danger)]">{error}</p></div>;
+
+  return <div className="flex flex-col gap-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm text-[var(--muted-foreground)]">Manage webhook endpoints for event notifications.</p></div><button className="flex items-center gap-2 rounded-lg bg-[var(--primary)] px-3 py-2 text-xs font-semibold text-white"><Plus className="size-4" /> Create webhook</button></div><Card className="overflow-hidden"><div className="flex items-center justify-between border-b border-[var(--border)] p-4"><span className="text-xs text-[var(--muted-foreground)]">{webhooks.length} webhooks</span></div>{webhooks.length === 0 ? <div className="flex min-h-[320px] flex-col items-center justify-center px-5 text-center"><Webhook className="mb-3 size-8 text-[var(--muted-foreground)]/50" /><p className="text-sm font-medium text-[var(--muted-foreground)]">No webhooks found</p></div> : <div className="divide-y divide-[var(--border)]">{webhooks.map((webhook) => <div key={webhook.id} className="flex items-center justify-between p-4 text-sm"><div><div className="flex items-center gap-2"><Badge tone={webhook.enabled ? "success" : "neutral"}>{webhook.enabled ? "Enabled" : "Disabled"}</Badge><span className="font-medium text-white truncate max-w-[300px]">{webhook.url}</span></div><p className="mt-1 text-xs text-[var(--muted-foreground)]">Events: {webhook.eventTypes.join(", ")}</p></div><p className="text-xs text-[var(--muted-foreground)]">{new Date(webhook.createdAt).toLocaleString()}</p></div>)}</div></Card></div> }
+
+export default function Dashboard() { const [active, setActive] = useState("Overview"); const title = active === "Overview" ? "Overview" : active; return <main className="flex min-h-screen bg-[var(--background)]"><Sidebar active={active} onChange={setActive} /><div className="min-w-0 flex-1"><Topbar title={title} /><div className="p-5 md:p-8">{active === "Overview" ? <Overview /> : active === "Jobs" ? <Jobs /> : active === "Schedules" ? <Schedules /> : active === "Webhooks" ? <Webhooks /> : <Card className="flex min-h-[420px] flex-col items-center justify-center p-8 text-center"><Code2 className="mb-4 size-9 text-[var(--primary)]" /><h2 className="text-lg font-semibold text-white">{active} is ready for API wiring</h2><p className="mt-2 max-w-md text-sm leading-6 text-[var(--muted-foreground)]">The navigation and operations shell are in place. This surface will use the corresponding Spring Boot controller once the authenticated dashboard proxy is configured.</p></Card>}</div></div></main> }
