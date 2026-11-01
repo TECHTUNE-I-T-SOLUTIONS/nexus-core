@@ -5,6 +5,16 @@ import { login, register, getCurrentUser, forgotPassword, type LoginRequest, typ
 
 const API_URL = process.env.NEXUS_API_URL || "http://localhost:8080"
 
+export async function registerUser(data: RegisterRequest) {
+  try {
+    const user = await register(data)
+    return { success: true, user }
+  } catch (error: any) {
+    console.error("Registration error:", error.message)
+    return { success: false, error: error.message || "Registration failed" }
+  }
+}
+
 export async function loginUser(data: LoginRequest) {
   try {
     const response = await login(data)
@@ -20,16 +30,6 @@ export async function loginUser(data: LoginRequest) {
   } catch (error: any) {
     console.error("Login error:", error.message)
     return { success: false, error: "Invalid email or password" }
-  }
-}
-
-export async function registerUser(data: RegisterRequest) {
-  try {
-    const user = await register(data)
-    return { success: true, user }
-  } catch (error: any) {
-    console.error("Registration error:", error.message)
-    return { success: false, error: error.message || "Registration failed" }
   }
 }
 
