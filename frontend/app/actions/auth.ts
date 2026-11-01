@@ -8,7 +8,8 @@ const API_URL = process.env.NEXUS_API_URL || "http://localhost:8080"
 export async function loginUser(data: LoginRequest) {
   try {
     const response = await login(data)
-    cookies().set("nexus_token", response.token, {
+    const cookieStore = await cookies()
+    cookieStore.set("nexus_token", response.token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
@@ -40,12 +41,14 @@ export async function requestPasswordReset(data: ForgotPasswordRequest) {
 }
 
 export async function logoutUser() {
-  cookies().delete("nexus_token")
+  const cookieStore = await cookies()
+  cookieStore.delete("nexus_token")
   return { success: true }
 }
 
 export async function getAuthUser() {
-  const token = cookies().get("nexus_token")?.value
+  const cookieStore = await cookies()
+  const token = cookieStore.get("nexus_token")?.value
   if (!token) {
     return null
   }
