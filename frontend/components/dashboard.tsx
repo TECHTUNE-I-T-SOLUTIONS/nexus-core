@@ -50,7 +50,12 @@ function Jobs() {
   useEffect(() => {
     async function loadJobs() {
       try {
-        const token = document.cookie.split('nexus_token=')[1]?.split(';')[0];
+        const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+          const [key, value] = cookie.split('=');
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, string>);
+        const token = cookies['nexus_token'];
         if (!token) {
           setError("Not authenticated");
           setLoading(false);
@@ -128,7 +133,12 @@ function Schedules() {
   useEffect(() => {
     async function loadSchedules() {
       try {
-        const token = document.cookie.split('nexus_token=')[1]?.split(';')[0];
+        const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+          const [key, value] = cookie.split('=');
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, string>);
+        const token = cookies['nexus_token'];
         if (!token) {
           setError("Not authenticated");
           setLoading(false);
@@ -191,7 +201,12 @@ function Webhooks() {
   useEffect(() => {
     async function loadWebhooks() {
       try {
-        const token = document.cookie.split('nexus_token=')[1]?.split(';')[0];
+        const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
+          const [key, value] = cookie.split('=');
+          acc[key] = value;
+          return acc;
+        }, {} as Record<string, string>);
+        const token = cookies['nexus_token'];
         if (!token) {
           setError("Not authenticated");
           setLoading(false);
