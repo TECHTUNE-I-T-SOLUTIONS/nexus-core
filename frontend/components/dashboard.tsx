@@ -50,18 +50,11 @@ function Jobs() {
   useEffect(() => {
     async function loadJobs() {
       try {
-        const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
-          const [key, value] = cookie.split('=');
-          acc[key] = value;
-          return acc;
-        }, {} as Record<string, string>);
-        const token = cookies['nexus_token'];
-        if (!token) {
-          setError("Not authenticated");
-          setLoading(false);
-          return;
+        const response = await fetch("/api/dashboard/jobs");
+        if (!response.ok) {
+          throw new Error("Failed to fetch jobs");
         }
-        const data = await fetchJobs(token);
+        const data = await response.json();
         setJobs(data);
         setLoading(false);
       } catch (err: any) {
@@ -133,18 +126,11 @@ function Schedules() {
   useEffect(() => {
     async function loadSchedules() {
       try {
-        const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
-          const [key, value] = cookie.split('=');
-          acc[key] = value;
-          return acc;
-        }, {} as Record<string, string>);
-        const token = cookies['nexus_token'];
-        if (!token) {
-          setError("Not authenticated");
-          setLoading(false);
-          return;
+        const response = await fetch("/api/dashboard/schedules");
+        if (!response.ok) {
+          throw new Error("Failed to fetch schedules");
         }
-        const data = await fetchSchedules(token);
+        const data = await response.json();
         setSchedules(data);
         setLoading(false);
       } catch (err: any) {
@@ -201,18 +187,11 @@ function Webhooks() {
   useEffect(() => {
     async function loadWebhooks() {
       try {
-        const cookies = document.cookie.split('; ').reduce((acc, cookie) => {
-          const [key, value] = cookie.split('=');
-          acc[key] = value;
-          return acc;
-        }, {} as Record<string, string>);
-        const token = cookies['nexus_token'];
-        if (!token) {
-          setError("Not authenticated");
-          setLoading(false);
-          return;
+        const response = await fetch("/api/dashboard/webhooks");
+        if (!response.ok) {
+          throw new Error("Failed to fetch webhooks");
         }
-        const data = await fetchWebhooks(token);
+        const data = await response.json();
         setWebhooks(data);
         setLoading(false);
       } catch (err: any) {
