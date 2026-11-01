@@ -18,7 +18,8 @@ export async function loginUser(data: LoginRequest) {
     })
     return { success: true, user: response.user }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    console.error("Login error:", error.message)
+    return { success: false, error: "Invalid email or password" }
   }
 }
 
@@ -27,7 +28,8 @@ export async function registerUser(data: RegisterRequest) {
     const user = await register(data)
     return { success: true, user }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    console.error("Registration error:", error.message)
+    return { success: false, error: error.message || "Registration failed" }
   }
 }
 
@@ -36,7 +38,8 @@ export async function requestPasswordReset(data: ForgotPasswordRequest) {
     await forgotPassword(data)
     return { success: true }
   } catch (error: any) {
-    return { success: false, error: error.message }
+    console.error("Password reset error:", error.message)
+    return { success: false, error: error.message || "Failed to request password reset" }
   }
 }
 

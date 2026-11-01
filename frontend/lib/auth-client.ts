@@ -47,8 +47,13 @@ export async function register(data: RegisterRequest): Promise<User> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Registration failed");
+    const text = await response.text();
+    try {
+      const error = JSON.parse(text);
+      throw new Error(error.error || "Registration failed");
+    } catch {
+      throw new Error(`Registration failed: ${response.status} ${response.statusText}`);
+    }
   }
 
   return response.json();
@@ -62,8 +67,13 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Login failed");
+    const text = await response.text();
+    try {
+      const error = JSON.parse(text);
+      throw new Error(error.error || "Invalid email or password");
+    } catch {
+      throw new Error(`Login failed: ${response.status} ${response.statusText}`);
+    }
   }
 
   return response.json();

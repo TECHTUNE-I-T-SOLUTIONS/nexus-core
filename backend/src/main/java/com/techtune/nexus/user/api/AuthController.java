@@ -12,6 +12,9 @@ import com.techtune.nexus.user.persistence.UserTenantMembershipRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -51,7 +54,7 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request) {
         var userOpt = userService.authenticateUser(request.email, request.password);
         if (userOpt.isEmpty()) {
-            return ResponseEntity.status(401).body(Map.of("error", "Invalid credentials"));
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid email or password"));
         }
         User user = userOpt.get();
         String token = user.getId().toString();
@@ -123,12 +126,16 @@ public class AuthController {
         }
     }
 
-    record RegisterRequest(String email, String password, String fullName) {}
-    record LoginRequest(String email, String password) {}
-    record CreateTenantRequest(String tenantName) {}
+    record RegisterRequest(
+            @NotBlank @Email String email,
+            @NotBlank @Size(min = 8, max = 128) String password,
+            @NotBlank @Size(min = 2, max = 100) String fullName
+    ) {}
+    record LoginRequest(@NotBlank @Email String email, @NotBlank String password) {}
+    record CreateTenantRequest(@NotBlank @Size(min = 2, max = 100) String tenantName) {}
     record LoginResponse(String token, UserResponse user) {}
-    record ForgotPasswordRequest(String email) {}
-    record ResetPasswordRequest(String token, String newPassword) {}
+    record ForgotPasswordRequest(@NotBlank @Email String email) {}
+    record ResetPasswordRequest(@NotBlank String token, @NotBlank @Size(min = 8, max = 128) String newPassword) {}
     
     record UserResponse(String id, String email, String fullName) {
         static UserResponse from(User user) {
